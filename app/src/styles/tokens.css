@@ -1,0 +1,39 @@
+/* Placeholder tokens for the Phase 0 page. The real system arrives in Phase 5. */
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#fafaf9, #161615);
+  --fg: light-dark(#1c1c1a, #ececea);
+  --muted: light-dark(#5f5f5a, #a3a39d);
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+.page {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  max-width: 640px;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 32px 16px;
+}
+
+.page main {
+  flex: 1;
+}
+
+.page footer {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.page a {
+  color: inherit;
+}

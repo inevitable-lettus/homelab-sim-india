@@ -1,0 +1,32 @@
+{
+  "_note": "Hand-written Phase 1 fixture in the Trace shape from Architecture.md. Not produced by the core. Addresses are documentation or private ranges.",
+  "nodes": [
+    { "id": "phone", "label": "Phone (mobile data)", "x": 0, "y": 120 },
+    { "id": "relay", "label": "Relay", "x": 0, "y": 0 },
+    { "id": "carrier_nat", "label": "ISP carrier NAT", "x": 280, "y": 60 },
+    { "id": "home_router", "label": "Home router", "x": 560, "y": 60 },
+    { "id": "server", "label": "Jellyfin server", "x": 840, "y": 60 }
+  ],
+  "edges": [
+    { "id": "phone-carrier", "source": "phone", "target": "carrier_nat" },
+    { "id": "relay-carrier", "source": "relay", "target": "carrier_nat" },
+    { "id": "carrier-home", "source": "carrier_nat", "target": "home_router" },
+    { "id": "home-server", "source": "home_router", "target": "server" }
+  ],
+  "traces": {
+    "inbound_blocked_by_cgnat": [
+      { "at": "phone", "action": "send", "packet": { "src": "198.51.100.7:51000", "dst": "203.0.113.50:8096" }, "reason": null },
+      { "at": "carrier_nat", "action": "drop", "packet": { "src": "198.51.100.7:51000", "dst": "203.0.113.50:8096" }, "reason": "cgnat-no-inbound-mapping" }
+    ],
+    "outbound_tunnel_then_inbound": [
+      { "at": "server", "action": "send", "packet": { "src": "192.168.1.20:41641", "dst": "198.51.100.200:41641" }, "reason": null },
+      { "at": "home_router", "action": "rewrite", "packet": { "src": "100.64.12.34:41641", "dst": "198.51.100.200:41641" }, "reason": "nat-source-rewrite" },
+      { "at": "carrier_nat", "action": "rewrite", "packet": { "src": "203.0.113.50:62000", "dst": "198.51.100.200:41641" }, "reason": "cgnat-mapping-created" },
+      { "at": "relay", "action": "deliver", "packet": { "src": "203.0.113.50:62000", "dst": "198.51.100.200:41641" }, "reason": null },
+      { "at": "relay", "action": "encapsulate", "packet": { "src": "198.51.100.200:41641", "dst": "203.0.113.50:62000" }, "reason": "tunnel-carries-inbound" },
+      { "at": "carrier_nat", "action": "rewrite", "packet": { "src": "198.51.100.200:41641", "dst": "100.64.12.34:41641" }, "reason": "cgnat-mapping-hit" },
+      { "at": "home_router", "action": "rewrite", "packet": { "src": "198.51.100.200:41641", "dst": "192.168.1.20:41641" }, "reason": "nat-mapping-hit" },
+      { "at": "server", "action": "deliver", "packet": { "src": "198.51.100.200:41641", "dst": "192.168.1.20:41641" }, "reason": null }
+    ]
+  }
+}

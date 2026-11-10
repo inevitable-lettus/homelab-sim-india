@@ -1,0 +1,20 @@
+{
+  "name": "homelab-sim",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "engines": {
+    "node": ">=24"
+  },
+  "workspaces": [
+    "app"
+  ],
+  "scripts": {
+    "setup": "sh scripts/install-tools.sh && npm ci",
+    "wasm": "sh scripts/build-wasm.sh",
+    "data": "sh scripts/build-data.sh",
+    "dev": "npm run wasm && npm run data && npm run dev -w app",
+    "build": "npm run wasm && npm run data && npm run build -w app",
+    "check": "sh scripts/check.sh"
+  }
+}
