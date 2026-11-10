@@ -9,7 +9,7 @@ Goal: answer three risky questions with throwaway code, write the answers into [
 - Phase 0 scaffold passes `npm run check`, and the page runs the Rust core through WASM in a real browser.
 - Spike 3 (HLBuilder audit) is finished and recorded in Handoff.md.
 - `@xyflow/react` and `v86` are installed in `app/`.
-- [`spikes/terminal/build-image.sh`](../spikes/terminal/build-image.sh) is written to build the Alpine image, **but it has not been run**. Check for `spikes/terminal/images/` first. If it is missing, ask the owner to run the script.
+- [`spikes/terminal/build-image.sh`](../spikes/terminal/build-image.sh) has built the Alpine image into `spikes/terminal/images/` (`alpine-fs.json` and `alpine-rootfs-flat/`, gitignored, local only). **It has never been booted.** If the folder is missing, ask the owner to rerun the script with Docker running.
 - [`spikes/fixtures/cgnat-traces.json`](../spikes/fixtures/cgnat-traces.json) is a ready trace fixture.
 - `app/src/lib/motion.ts` holds the motion tokens.
 

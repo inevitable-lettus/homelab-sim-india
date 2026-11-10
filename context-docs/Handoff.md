@@ -164,6 +164,6 @@ Community ISP reports through GitHub Discussions with a structured form (ISP, ci
 - **PATH:** Rust came from Homebrew's `rustup`, which isn't on the shell PATH. The npm scripts handle it through `scripts/env.sh`. For direct `cargo` use: `export PATH="$HOME/.cargo/bin:/opt/homebrew/opt/rustup/bin:$PATH"`.
 - **Toolchain:** Rust 1.99.1 pinned in `rust-toolchain.toml`. `wasm-bindgen` CLI pinned to the crate version in `Cargo.toml`, used directly instead of wasm-pack. TypeScript is 6.x because `typescript-eslint` does not support 7 yet.
 - **Generated, gitignored:** `app/src/wasm-pkg/`, `app/public/data/`. Run `npm run wasm` and `npm run data` after pulling Rust changes.
-- **Terminal image:** `bash spikes/terminal/build-image.sh` needs Docker running. **Not run or tested yet.**
+- **Terminal image:** `bash spikes/terminal/build-image.sh` needs Docker running. Built on 2026-11-10 into `spikes/terminal/images/` (gitignored): 1,430 files, 43 MB compressed on disk. Booting it in v86 is **not tested yet**. That is Spike 1. 43 MB is over the 30 MB budget only if a learner fetches every file. v86 fetches files on demand, so Spike 1 must measure the real first download.
 - **Known:** `npm audit` reports 10 moderate findings, all one `minimatch` issue inside ESLint tooling. Dev-only, not shipped.
 - **Update rule:** at the end of each phase, update Current status, mark the phase done with the date, and record gotchas here. Change Architecture, Design or Animations only when the design itself changes.
