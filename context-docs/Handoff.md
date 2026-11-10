@@ -4,7 +4,7 @@ Living state and build order. **Read this first in every session, and update it 
 
 ## Current status (2026-11-10)
 
-**Phase 0 passes locally.** `npm run check` is green from a clean copy (4 Rust tests, 3 WASM tests through Node, lint, types, build, size budget), and the production build runs the Rust core and loads the data bundle in a real browser with no console errors. **Still open for Phase 0:** a GitHub repo, a first CI run and a preview URL. Next action after that is Phase 1, using [Phase1-Brief.md](Phase1-Brief.md).
+**Phase 0 is done.** Repo: <https://github.com/inevitable-lettus/homelab-sim-india>. Preview: <https://inevitable-lettus.github.io/homelab-sim-india/>. CI and deploy passed on the first push, and the deployed page runs the Rust core, loads the data bundle and links to its exact source commit. Spike 3 of Phase 1 is also done. **Next action: the rest of Phase 1, using [Phase1-Brief.md](Phase1-Brief.md).**
 
 `docs/ideation.md` is a local-only snapshot of the original ideation doc, deliberately kept out of the public repo. **Where it conflicts with these context docs, these win.** It predates the India focus and most decisions below.
 
@@ -60,7 +60,7 @@ Pushed to later by the owner:
 
 ## Build phases
 
-### Phase 0: Repository and licences
+### Phase 0: Repository and licences (done 2026-11-10)
 
 Create git repo, Cargo workspace (`sim-core`, `sim-wasm`, `data-build`), Vite + React + TypeScript app, CI, `LICENSE` (AGPL-3.0), CC BY-SA 4.0 licence files for `data/`, `content/`, `missions/`, `curriculum/`, `CONTRIBUTING.md` with DCO, `THIRD_PARTY.md`, and a source link in the app footer.
 
@@ -160,6 +160,7 @@ Community ISP reports through GitHub Discussions with a structured form (ISP, ci
 ## Session context
 
 - **Canonical commands:** `npm run setup` (once), `npm run dev`, `npm run check` (everything CI runs), `npm run build`.
+- **Commits:** this repo's local Git config uses the GitHub no-reply address on purpose, because the repo is public. Sign off with `git commit -s`.
 - **PATH:** Rust came from Homebrew's `rustup`, which isn't on the shell PATH. The npm scripts handle it through `scripts/env.sh`. For direct `cargo` use: `export PATH="$HOME/.cargo/bin:/opt/homebrew/opt/rustup/bin:$PATH"`.
 - **Toolchain:** Rust 1.99.1 pinned in `rust-toolchain.toml`. `wasm-bindgen` CLI pinned to the crate version in `Cargo.toml`, used directly instead of wasm-pack. TypeScript is 6.x because `typescript-eslint` does not support 7 yet.
 - **Generated, gitignored:** `app/src/wasm-pkg/`, `app/public/data/`. Run `npm run wasm` and `npm run data` after pulling Rust changes.
