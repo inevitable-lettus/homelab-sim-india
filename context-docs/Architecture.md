@@ -66,14 +66,21 @@ Hosting nests explicitly: `machine → hypervisor → VM or LXC → container ru
 ### Evaluation
 
 ```rust
-pub fn evaluate(world: &World, bundle: &Bundle) -> Report;
-pub fn trace(world: &World, intent: &Intent, bundle: &Bundle) -> Trace;
-pub fn grade(mission: &Mission, world: &World, artifacts: &Artifacts, bundle: &Bundle) -> Grade;
+pub fn evaluate(world: &World, bundle: &Bundle) -> Report;          // facts, findings, one trace per attempt
+pub fn trace(world: &World, attempt: &Attempt, bundle: &Bundle) -> Trace;
+pub fn grade(mission: &Mission, depth: Depth, world: &World, artifacts: &Artifacts, bundle: &Bundle) -> Grade;
+pub fn resolve_target(world: &World, target: &Target, bundle: &Bundle) -> Resolved;
 ```
 
-`evaluate` derives facts (addresses, routes, DNS, reachability) by iterating to a **fixed point** with a bounded iteration count and stable ordering, then runs rules over the result. Hitting the bound is a reported error, never a silent stop.
+`evaluate` derives addresses by iterating to a **fixed point** with a bounded iteration count and stable ordering (`facts.rs`), then runs rules over the result (`rules.rs`) and traces every attempt in the world (`walk.rs`, `trace.rs`). Hitting the bound is a reported finding (`evaluation-did-not-settle`), never a silent stop.
 
-A half-built world is normal. Rules report what they can, and nothing gates later checks. Only true physical impossibilities (a cable that cannot fit that port) are rejected at the moment of the action.
+A `Grade` carries the whole `Report`, so the UI makes one call per change. The connection attempts (`Attempt`) are part of the world, so "what the learner is trying" is data, not UI state.
+
+A half-built world is normal. Rules report what they can, and nothing gates later checks.
+
+**Unknown line type.** When an ISP's line type is unknown and no line check has been done, an attempt is traced under each possibility. If every case ends the same way, that is the answer and the trace says which case it shows (`assumed`). If they differ, the answer is `Unknown` with reason `line-type-unknown`. The learner's line check beats profile data, and "can't find it" is itself an answer that yields `Unknown`.
+
+**Reasons.** Every step, drop, finding and goal result carries a `Reason` (`reason.rs`). Its id is also the id of its explanation text, and the data build fails if any reason has no text. Adding a reason is one enum line and one entry in `content/steps.yaml`.
 
 ### Verdicts are three-valued
 
@@ -94,25 +101,45 @@ Missing data produces `Unknown`, which the UI must show. **A rule may never trea
 
 ## Network logic for the remote-access track
 
-Logic-level, not packet-level. The core models what decides reachability:
+Logic-level, not packet-level: one representative packet per leg, walked hop by hop. The core models what decides reachability:
 
 - Address classes: LAN private, CGNAT `100.64.0.0/10` (RFC 6598), public IPv4, global IPv6.
-- NAT mapping tables at the home router and, when present, the ISP's carrier NAT. An inbound packet needs an existing mapping or a forward rule at **every** NAT it crosses.
+- NAT mapping tables at the home router and, when present, the ISP's carrier NAT. An inbound packet needs an existing mapping or a forward rule at **every** NAT it crosses. Mappings have an idle timeout and an age.
 - Outbound-initiated connections create mappings. This is why tunnels and overlay VPNs work behind CGNAT, and the concept the track teaches.
-- Tunnels and overlays as logical links (WireGuard, Tailscale-style overlay, Cloudflare-Tunnel-style connector, relay through a VPS).
+- Tunnels: WireGuard with explicit peers, and a mesh overlay that the core turns into hub-and-spoke through its relay (always relayed, a stated model limit). Keepalives set the mapping age; a tunnel with no keepalive has mappings as old as the attempt's `idle_s`.
 - IPv6 reachability, including whether the client side has IPv6 and whether the router firewall admits it.
-- Simple allow or deny firewall rules, DNS names, and port conflicts on one host.
+- Host firewalls, loopback-only services, DNS names, and port conflicts on one host.
 
-`trace` returns an ordered list of steps. The UI only plays it back ([Animations.md](Animations.md)).
+A `Trace` is an ordered list of legs (`setup` for tunnels dialling out, then `request`, then `reply`), each an ordered list of steps. The UI only plays it back ([Animations.md](Animations.md)).
 
 ```rust
-pub struct TraceStep {
-    at: NodeId,
-    action: StepAction,      // Send | Forward | Rewrite | Encapsulate | Drop | Deliver
-    packet: PacketView,      // source and destination as seen at this hop
-    reason: Option<ExplanationId>,
+pub struct Step {
+    at: Id,
+    action: StepAction,          // Send | Forward | Rewrite | Encapsulate | Decapsulate | Drop | Deliver | Unknown
+    packet: PacketView,          // as it leaves this node
+    before: Option<PacketView>,  // as it arrived, when the node changed it
+    reason: Reason,
+    via_link: Option<Id>,
+    timing: Option<HopTiming>,   // propagation, serialization, queue, fixed and processing delay
+    table: Option<TableEvent>,   // the NAT row or forward that decided it
 }
 ```
+
+### Physics
+
+All of it is integer arithmetic in `physics.rs`, so results are byte-identical everywhere. Missing inputs give `None`, which the UI shows as "unknown". Every number the UI shows comes from here.
+
+| Quantity | Model | Unit |
+|---|---|---|
+| Propagation | length x a per-medium constant: 4900 ps/m in fibre and backbone, 5000 in copper, 3336 in air | ns |
+| Serialization | packet bits / link rate | ns |
+| Queueing | M/D/1 mean wait from the link's load, `rho / (2 (1 - rho))` service times | ns |
+| Fixed delay | per link (`extra_ns`), such as radio scheduling on a mobile link | ns |
+| Processing | a constant per node kind | ns |
+| MTU | per link, default 1500. WireGuard adds 60 bytes over IPv4 and 80 over IPv6, default tunnel MTU 1420 | bytes |
+| Transfer time | bytes on the wire, with headers and wrappers, over the spare rate of the slowest link | ms |
+
+These are estimates of a teaching model and the UI labels them so. Link lengths and rates in the missions are invented, not measured.
 
 ## Real terminal
 
@@ -168,7 +195,19 @@ power: { idle_w: 8, load_w: 25 }
 
 `kind: device` additionally requires a source URL and `retrieved_at` for every capability value. Without a source, the value is absent and rules return `Unknown`. Archetypes are labelled in the UI as teaching models, not products. Rust types are the single schema definition, and JSON Schema for editors is generated from them.
 
-Data lives in YAML in git, not Postgres, so anyone can contribute by PR and every change is reviewable. CI checks schema validity and flags dead source links.
+Data lives in YAML in git, not Postgres, so anyone can contribute by PR and every change is reviewable.
+
+As built (Phase 4), `tools/data-build` reads the repo and writes one `bundle.json` (`schema_version` 2):
+
+| Source | Becomes | Checked |
+|---|---|---|
+| `data/archetypes/*.yaml`, `data/devices/*.yaml` | `devices` | id matches file name; a `device` may not hold a bare value, only `{ value, source, retrieved_at }` or `unknown` |
+| `data/isps/*.yaml` | `isps` | a `real` profile's claim needs `sources` and `checked`, or `value: unknown` |
+| `content/steps.yaml` | `explanations` (title and one line) | every `Reason` id has an entry |
+| `content/explanations/<id>.md` | the long sections of an explanation | only the six headings from [Design.md](Design.md) |
+| `missions/<id>/mission.yaml` | `missions` | every id it names exists; both layouts place every node; the starting world does not already pass |
+
+Every problem is reported with its file, and any problem fails the build. YAML is parsed with `serde_norway`. Unknown fields are rejected everywhere, so a typo is an error and not a silent default. A test (`tools/data-build/tests/missions.rs`) proves a new device needs one YAML file and no code. JSON Schema generation and dead-link checks are Phase 3 work and are not built yet.
 
 ### ISP profiles
 

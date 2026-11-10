@@ -1,0 +1,11 @@
+# A generic teaching machine. Not a product.
+id: single-nic-mini-pc
+kind: archetype
+label: Single-NIC mini PC
+capabilities:
+  arch: x86_64
+  ram_gb: 16
+  nic: [{ speed_mbps: 1000 }]
+  virtualization: true
+  igpu_transcode: unknown
+power: { idle_w: 8, load_w: 25 }

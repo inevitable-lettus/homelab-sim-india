@@ -1,0 +1,131 @@
+# Licensed CC BY-SA 4.0. See missions/LICENSE.md.
+id: which-address
+order: 1
+title: Which address is yours?
+concept: LAN, WAN and public addresses
+scenario: >-
+  Meera runs Jellyfin on an old laptop at home in Pune. She is at her hostel in
+  Bengaluru with only mobile data, and wants to reach it. First question: which
+  address should her phone even dial?
+guided:
+  brief: >-
+    Every device at home has more than one address, depending on who is asking.
+    Tap each box on the board to see its addresses. Pick the address the phone
+    should dial, then press Run. You are done when the phone's packet arrives at
+    the home router, and you have answered the question about the line.
+  hints:
+    - Addresses that start with 192.168. only mean something inside one home. Millions of homes use the same ones.
+    - The phone is outside the home. It needs the address the rest of the internet uses for this home.
+    - Choose "The home's public address" and run again. The router will still refuse the packet. That is fine for now.
+challenge:
+  brief: >-
+    Get a packet from the phone as far as the home router. Then say whether this
+    line has its own public address.
+  hints:
+    - Compare the router's WAN address with the address a website sees.
+layout:
+  wide: { phone: [0, 140], mobile: [210, 140], internet: [420, 140], whatismyip: [420, 280], isp: [630, 140], home-router: [840, 140], server: [1050, 140] }
+  narrow: { phone: [0, 0], mobile: [0, 110], internet: [0, 220], whatismyip: [175, 275], isp: [0, 330], home-router: [0, 440], server: [0, 550] }
+controls:
+  - kind: dial
+    attempt: open-jellyfin
+    options:
+      - { label: "The server's home address", target: { kind: lan_of, node: server } }
+      - { label: "The router's WAN address", target: { kind: wan_of, node: home-router } }
+      - { label: "The home's public address", target: { kind: public_of, node: home-router } }
+  - kind: question
+    question: line-type
+questions:
+  - id: line-type
+    prompt: >-
+      Run "Ask a what-is-my-IP site from the server" and look at the last step.
+      Is the address the site saw the same as the home router's WAN address?
+    options:
+      - { value: same, label: "Same. This line has its own public address" }
+      - { value: different, label: "Different. Something upstream is sharing an address" }
+      - { value: cant-tell, label: "I can't tell" }
+    check: { kind: line_type, isp: isp }
+goals:
+  - id: reach-router
+    text: A packet from the phone arrives at the home router
+    check: { kind: reaches, attempt: open-jellyfin, node: home-router }
+  - id: line-type
+    text: Say whether this line has its own public address
+    check: { kind: answer, question: line-type }
+debrief:
+  did: >-
+    You found that one home has three kinds of address. The server's 192.168
+    address works only inside the home. The router's WAN address is what the ISP
+    gave it. The public address is what the rest of the internet sees. On this
+    line the last two are the same, so the phone's packet reached the router.
+  concept: three-addresses
+  real_line: >-
+    Open your router's admin page and find the WAN or Internet IP address. Then
+    open any "what is my IP" site. If the two match, your line has a public
+    address. If they differ, read Mission 3 before you try anything else.
+world:
+  nodes:
+    - kind: host
+      id: phone
+      label: Phone on mobile data
+      icon: phone
+    - kind: isp
+      id: mobile
+      label: Mobile network
+      ipv4: cgnat
+      public_pool: 198.51.100.0/24
+      cgnat_pool: 100.72.5.0/24
+      udp_timeout_s: 30
+    - kind: internet
+      id: internet
+      label: Internet
+    - kind: host
+      id: whatismyip
+      label: What-is-my-IP site
+      icon: site
+      static_ipv4: 192.0.2.80
+      services:
+        - { id: https, label: Website, proto: tcp, port: 443 }
+    - kind: isp
+      id: isp
+      label: Home ISP
+      profile: teaching-fibre
+      ipv4: public
+      public_pool: 203.0.113.0/24
+      cgnat_pool: 100.64.12.0/24
+      udp_timeout_s: 60
+    - kind: router
+      id: home-router
+      label: Home router
+      lan: 192.168.1.0/24
+      udp_timeout_s: 120
+    - kind: host
+      id: server
+      label: Jellyfin server
+      icon: server
+      device: old-laptop
+      static_ipv4: 192.168.1.20
+      services:
+        - { id: jellyfin, label: Jellyfin, proto: tcp, port: 8096 }
+  links:
+    # Lengths and rates are a teaching model: a hostel in Bengaluru, a home in
+    # Pune, and exchanges in Mumbai. Straight-line distances, rounded.
+    - { id: phone-mobile, a: phone, b: mobile, medium: cellular, length_m: 2000, rate_ab_bps: 8000000, rate_ba_bps: 20000000, load_permille: 200, extra_ns: 15000000 }
+    - { id: mobile-internet, a: mobile, b: internet, medium: backbone, length_m: 840000, rate_ab_bps: 10000000000, rate_ba_bps: 10000000000, load_permille: 300 }
+    - { id: site-internet, a: whatismyip, b: internet, medium: backbone, length_m: 5000, rate_ab_bps: 1000000000, rate_ba_bps: 1000000000 }
+    - { id: isp-internet, a: isp, b: internet, medium: backbone, length_m: 120000, rate_ab_bps: 10000000000, rate_ba_bps: 10000000000, load_permille: 300 }
+    - { id: home-isp, a: home-router, b: isp, medium: fibre, length_m: 8000, rate_ab_bps: 50000000, rate_ba_bps: 100000000, load_permille: 100 }
+    - { id: server-home, a: server, b: home-router, medium: ethernet, length_m: 5, rate_ab_bps: 1000000000, rate_ba_bps: 1000000000 }
+  attempts:
+    - id: open-jellyfin
+      label: Open Jellyfin from the phone
+      from: phone
+      to: { kind: lan_of, node: server }
+      proto: tcp
+      port: 8096
+    - id: check-ip
+      label: Ask a what-is-my-IP site from the server
+      from: server
+      to: { kind: address, ip: 192.0.2.80 }
+      proto: tcp
+      port: 443

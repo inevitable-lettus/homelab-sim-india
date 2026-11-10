@@ -1,0 +1,11 @@
+# A generic teaching machine. Not a product.
+id: single-board-computer
+kind: archetype
+label: Single-board computer
+capabilities:
+  arch: aarch64
+  ram_gb: 4
+  nic: [{ speed_mbps: 1000 }]
+  virtualization: false
+  igpu_transcode: false
+power: { idle_w: 3, load_w: 7 }

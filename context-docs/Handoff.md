@@ -4,11 +4,11 @@ Living state and build order. **Read this first in every session, and update it 
 
 ## Current status (2026-11-10)
 
-**Phases 0 and 1 are done.** Repo: <https://github.com/inevitable-lettus/homelab-sim-india>. Preview: <https://inevitable-lettus.github.io/homelab-sim-india/>. The deployed page runs the Rust core, loads the data bundle and links to its exact source commit. Phase 1 confirmed v86 as the terminal engine and React Flow for the board. Results are under Phase 1 below.
+**Phases 0, 1 and 4 are done**, with the minimum Phase 2 and 3 material Phase 4 needed. Repo: <https://github.com/inevitable-lettus/homelab-sim-india>. Preview: <https://inevitable-lettus.github.io/homelab-sim-india/>. The deployed page runs the Rust core, loads the data bundle (four missions) and links to its exact source commit. It has no mission UI yet. Phase 1 confirmed v86 as the terminal engine and React Flow for the board. Results are under Phase 1 below.
 
 **Owner's build order (2026-11-10), which overrides the phase numbering:** Part 1 is Phases 1, 4, 5, 6, 7, with only the minimum Phase 2 and 3 material the code needs (Rust schema types, short specs for Missions 1 to 5, a few archetypes, one clearly labelled teaching ISP profile with no real-ISP claims). Part 2 is Phases 2, 3 and 8. Part 3 is Phase 9. The owner approves between parts.
 
-**Next action: the minimum Phase 2 and 3 material, then Phase 4.**
+**Next action: Phase 5 (mission UI and playback).** Then Phases 6 and 7.
 
 `docs/ideation.md` is a local-only snapshot of the original ideation doc, deliberately kept out of the public repo. **Where it conflicts with these context docs, these win.** It predates the India focus and most decisions below.
 
@@ -168,11 +168,38 @@ Rust schema types, `tools/data-build`, generated JSON Schema, the versioned bund
 
 **Done =** the bundle builds in CI, invalid packs fail with a clear message, a test proves a new device works from **one YAML file with no code change**, and every ISP claim has a date and source or is `unknown`.
 
-### Phase 4: Simulation core
+### Phase 4: Simulation core (done 2026-11-10)
 
-World graph, fixed-point evaluation, three-valued findings, NAT and carrier NAT, mappings, forwards, firewall, DNS, tunnels, IPv6, traces, grading.
+World graph, fixed-point evaluation, three-valued findings, NAT and carrier NAT, mappings, forwards, firewall, DNS, tunnels, IPv6, traces, grading, and network physics.
 
 **Done =** fixture worlds cover every Mission 1–4 win and failure path, identical input gives byte-identical output, and missing data yields `Unknown` under test.
+
+#### Phase 4 result
+
+Built: `crates/sim-core` (`model`, `bundle`, `facts`, `walk`, `trace`, `rules`, `grade`, `physics`, `ip`, `reason`), `tools/data-build` as a real validator, `crates/sim-wasm` with `set_bundle`, `evaluate_json`, `grade_json`, `resolve_json`, and `app/src/lib/types.ts` as the TypeScript mirror. Design is in [Architecture.md](Architecture.md).
+
+Minimum Phase 2 and 3 material written for it: three archetypes, one teaching ISP profile (`teaching-fibre`, `kind: teaching`, no real-ISP claim), Missions 1 to 4 as `missions/<id>/mission.yaml`, text for all 73 reasons in `content/steps.yaml`, 15 long explanations in `content/explanations/`, and [curriculum/remote-access/missions-1-5.md](../curriculum/remote-access/missions-1-5.md).
+
+| Check | Result |
+|---|---|
+| Rust tests | 36 pass: 10 unit (IP classes, physics), 26 over the real mission files |
+| Mission 1–4 paths | Every win and every intended failure asserted, including each wrong port forward failing for its own reason |
+| Determinism | Bundle built twice is byte-identical; a grade is byte-identical after a JSON round trip; reversing node and link order changes no decision |
+| Unknown | Unknown line type, missing profile claim, "can't find it" line check, missing device pack and unknown IPv6 all give `Unknown`, under test |
+| One-YAML device | Test adds one file under `data/devices/`, rebuilds, and the virtualization rule changes its answer with no code change |
+| Unsourced data | The build fails for a real device with a bare value and for a real ISP claim with no source and date |
+| Size | 260,759 B gzipped of the 512,000 B budget. The WASM is 191 KB of that |
+
+Teaching-model numbers for the solved Mission 2: 42.3 ms round trip phone to server, and 12 min 51 s for a 1.5 GB film over the phone's 16 Mbit/s of spare downlink. Mission 4 through the relay: 42.7 ms, path MTU 1440.
+
+Gotchas for later phases:
+
+- **The WASM is 191 KB gzipped**, mostly serde code for the many types. It fits, but Phase 5 adds React Flow (about 70 KB). If the budget gets tight, try `opt-level = "z"` and `wasm-opt` before cutting features.
+- A trace can have **no legs**: the attempt failed before any packet left (no address of that kind, mesh not joined, name not found). The UI must show the reason on the origin node.
+- Mesh addresses are stable seats (`.10`, `.11`, in node-id order) whether or not a device has joined, so the dial option can show the address before joining.
+- `GoalCheck::RulePasses` fails when the rule produced no finding. A rule that said nothing has not passed.
+- `rustfmt.toml` sets `max_width = 120`. Run `cargo fmt --all` before `npm run check`.
+- Decisions taken without the owner, all cheap to change: the mesh overlay is always relayed; a line check of "can't find it" overrides profile data with `Unknown`; schema version is 2; `serde_norway` is the YAML parser (`serde_yaml` is unmaintained).
 
 ### Phase 5: Mission UI and playback
 

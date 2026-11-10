@@ -1,0 +1,113 @@
+# Licensed CC BY-SA 4.0. See missions/LICENSE.md.
+id: open-a-door
+order: 2
+title: Open a door
+concept: Port forwarding on a line with a public address
+scenario: >-
+  The phone's packet now reaches Meera's router, and the router throws it away.
+  Nobody told the router which machine inside should get it. This line has its
+  own public address, so one rule on the router is enough.
+guided:
+  brief: >-
+    Add a port forward on the home router. It tells the router: "when something
+    arrives on this port, pass it to this machine". Jellyfin listens on TCP port
+    8096 on the server at 192.168.1.20. Then press Run.
+  hints:
+    - Tap the home router and add a port forward. External port 8096, TCP.
+    - Send it to 192.168.1.20, internal port 8096. Check the server's address by tapping it.
+    - The phone must dial the home's public address, not the 192.168 one.
+challenge:
+  brief: >-
+    Make Jellyfin on the server reachable from the phone on mobile data. This
+    line has a public address.
+  hints:
+    - The router needs to know which inside machine and port should receive the connection.
+layout:
+  wide: { phone: [0, 140], mobile: [210, 140], internet: [420, 140], whatismyip: [420, 280], isp: [630, 140], home-router: [840, 140], server: [1050, 140] }
+  narrow: { phone: [0, 0], mobile: [0, 110], internet: [0, 220], whatismyip: [175, 275], isp: [0, 330], home-router: [0, 440], server: [0, 550] }
+controls:
+  - kind: dial
+    attempt: open-jellyfin
+    options:
+      - { label: "The server's home address", target: { kind: lan_of, node: server } }
+      - { label: "The router's WAN address", target: { kind: wan_of, node: home-router } }
+      - { label: "The home's public address", target: { kind: public_of, node: home-router } }
+  - kind: port_forwards
+    router: home-router
+goals:
+  - id: open-jellyfin
+    text: The phone opens Jellyfin on the server
+    check: { kind: delivered, attempt: open-jellyfin, to: server }
+debrief:
+  did: >-
+    You added a port forward, and the router rewrote the packet's destination
+    from the public address to the server's 192.168 address. The reply went back
+    the same way. This is the classic way to host something at home, and it only
+    works because this line has a public address.
+  concept: port-forward-hit
+  real_line: >-
+    A forwarded port is open to everyone on the internet, not just you. On a real
+    line, forward only what you must, keep that software updated, and prefer a
+    VPN for anything private. And check your line first: on many Indian
+    connections this does not work at all. That is the next mission.
+world:
+  nodes:
+    - kind: host
+      id: phone
+      label: Phone on mobile data
+      icon: phone
+    - kind: isp
+      id: mobile
+      label: Mobile network
+      ipv4: cgnat
+      public_pool: 198.51.100.0/24
+      cgnat_pool: 100.72.5.0/24
+      udp_timeout_s: 30
+    - kind: internet
+      id: internet
+      label: Internet
+    - kind: host
+      id: whatismyip
+      label: What-is-my-IP site
+      icon: site
+      static_ipv4: 192.0.2.80
+      services:
+        - { id: https, label: Website, proto: tcp, port: 443 }
+    - kind: isp
+      id: isp
+      label: Home ISP
+      profile: teaching-fibre
+      ipv4: public
+      public_pool: 203.0.113.0/24
+      cgnat_pool: 100.64.12.0/24
+      udp_timeout_s: 60
+    - kind: router
+      id: home-router
+      label: Home router
+      lan: 192.168.1.0/24
+      udp_timeout_s: 120
+    - kind: host
+      id: server
+      label: Jellyfin server
+      icon: server
+      device: old-laptop
+      static_ipv4: 192.168.1.20
+      services:
+        - { id: jellyfin, label: Jellyfin, proto: tcp, port: 8096 }
+  links:
+    # Lengths and rates are a teaching model: a hostel in Bengaluru, a home in
+    # Pune, and exchanges in Mumbai. Straight-line distances, rounded.
+    - { id: phone-mobile, a: phone, b: mobile, medium: cellular, length_m: 2000, rate_ab_bps: 8000000, rate_ba_bps: 20000000, load_permille: 200, extra_ns: 15000000 }
+    - { id: mobile-internet, a: mobile, b: internet, medium: backbone, length_m: 840000, rate_ab_bps: 10000000000, rate_ba_bps: 10000000000, load_permille: 300 }
+    - { id: site-internet, a: whatismyip, b: internet, medium: backbone, length_m: 5000, rate_ab_bps: 1000000000, rate_ba_bps: 1000000000 }
+    - { id: isp-internet, a: isp, b: internet, medium: backbone, length_m: 120000, rate_ab_bps: 10000000000, rate_ba_bps: 10000000000, load_permille: 300 }
+    - { id: home-isp, a: home-router, b: isp, medium: fibre, length_m: 8000, rate_ab_bps: 50000000, rate_ba_bps: 100000000, load_permille: 100 }
+    - { id: server-home, a: server, b: home-router, medium: ethernet, length_m: 5, rate_ab_bps: 1000000000, rate_ba_bps: 1000000000 }
+  attempts:
+    - id: open-jellyfin
+      label: Open Jellyfin from the phone
+      from: phone
+      to: { kind: public_of, node: home-router }
+      proto: tcp
+      port: 8096
+      transfer: { bytes: 1500000000, direction: reply }

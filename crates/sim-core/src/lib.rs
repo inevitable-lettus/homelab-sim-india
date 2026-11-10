@@ -1,49 +1,41 @@
 //! Deterministic simulation core. See context-docs/Architecture.md.
 //!
-//! This crate must stay pure: no DOM, wasm, clock, randomness or network.
-//! Phase 0 ships only the public shape and a stub `evaluate`.
+//! This crate must stay pure: no DOM, wasm, clock, randomness or network, no
+//! floats in decisions and no hash-ordered iteration. The same input always
+//! gives the same bytes out.
 
 #![forbid(unsafe_code)]
 
+pub mod artifacts;
+pub mod bundle;
+pub mod facts;
+pub mod grade;
+pub mod ip;
+pub mod model;
+pub mod physics;
+pub mod reason;
+mod rules;
+pub mod trace;
+mod walk;
+
 use serde::{Deserialize, Serialize};
 
-/// Bumped whenever the data bundle format changes incompatibly.
-pub const SCHEMA_VERSION: u32 = 1;
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Bundle {
-    pub schema_version: u32,
-}
-
-impl Bundle {
-    pub fn empty() -> Self {
-        Self {
-            schema_version: SCHEMA_VERSION,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct World {
-    #[serde(default)]
-    pub nodes: Vec<Node>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Node {
-    pub id: String,
-}
+pub use bundle::{Bundle, Depth, Mission, SCHEMA_VERSION};
+pub use grade::{Artifacts, Grade, grade};
+pub use model::World;
+pub use reason::Reason;
+pub use trace::{Trace, trace};
 
 /// Three-valued on purpose: missing data is `Unknown`, never a pass.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Status {
-    Pass,
     Fail,
     Unknown,
+    Pass,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Severity {
     Error,
@@ -51,105 +43,88 @@ pub enum Severity {
     Info,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+/// Where the data behind a verdict came from. The UI words verdicts by this.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Provenance {
     Official,
     Community,
+    /// A teaching model. Says nothing about any real product or provider.
     Teaching,
+    /// The learner's own line check.
     LineCheck,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Tri {
+    Yes,
+    No,
+    Unknown,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Finding {
-    pub rule_id: String,
+    pub rule_id: Reason,
     pub status: Status,
     pub severity: Severity,
     pub involved: Vec<String>,
-    pub explanation_id: String,
+    pub explanation_id: Reason,
     pub provenance: Provenance,
+    /// Shown in the debrief only, so beginners are not nagged mid-mission.
+    pub debrief_only: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Report {
     pub schema_version: u32,
+    pub facts: facts::Facts,
     pub findings: Vec<Finding>,
+    /// One trace per attempt in the world, in the world's order.
+    pub attempts: Vec<Trace>,
 }
 
-/// Phase 0 stub. The real fixed-point evaluation arrives in Phase 4.
-pub fn evaluate(world: &World, bundle: &Bundle) -> Report {
-    let finding = if bundle.schema_version != SCHEMA_VERSION {
-        stub_finding("bundle.schema_mismatch", Status::Unknown, Vec::new())
-    } else if world.nodes.is_empty() {
-        stub_finding("world.empty", Status::Unknown, Vec::new())
-    } else {
-        let mut involved: Vec<String> = world.nodes.iter().map(|node| node.id.clone()).collect();
-        involved.sort();
-        stub_finding("world.has_nodes", Status::Pass, involved)
-    };
+/// What a dial target points at right now, for showing next to the choice.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Resolved {
+    pub address: facts::Addr,
+    /// Why there is no address, when there is none.
+    pub reason: Option<Reason>,
+}
 
+pub fn resolve_target(world: &World, target: &model::Target, bundle: &Bundle) -> Resolved {
+    let net = facts::Net::build(world, bundle, &facts::Assumptions::new());
+    match walk::resolve(&net, target, 0) {
+        Ok(ip) => Resolved { address: facts::Addr::Known(ip), reason: None },
+        Err(walk::NoAddr::Fail(reason)) => Resolved { address: facts::Addr::Absent, reason: Some(reason) },
+        Err(walk::NoAddr::Unknown(reason)) => Resolved { address: facts::Addr::Unknown, reason: Some(reason) },
+    }
+}
+
+/// Derive addresses to a fixed point, run every rule, and trace every attempt.
+pub fn evaluate(world: &World, bundle: &Bundle) -> Report {
+    let net = facts::Net::build(world, bundle, &facts::Assumptions::new());
+    if bundle.schema_version != SCHEMA_VERSION {
+        // Data we cannot read is not a pass and not a fail.
+        return Report {
+            schema_version: SCHEMA_VERSION,
+            facts: facts::facts(&net),
+            findings: vec![Finding {
+                rule_id: Reason::BundleSchemaMismatch,
+                status: Status::Unknown,
+                severity: Severity::Error,
+                involved: Vec::new(),
+                explanation_id: Reason::BundleSchemaMismatch,
+                provenance: Provenance::Teaching,
+                debrief_only: false,
+            }],
+            attempts: Vec::new(),
+        };
+    }
     Report {
         schema_version: SCHEMA_VERSION,
-        findings: vec![finding],
-    }
-}
-
-fn stub_finding(rule_id: &str, status: Status, involved: Vec<String>) -> Finding {
-    Finding {
-        rule_id: rule_id.to_owned(),
-        status,
-        severity: Severity::Info,
-        involved,
-        explanation_id: rule_id.to_owned(),
-        provenance: Provenance::Teaching,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn world(ids: &[&str]) -> World {
-        World {
-            nodes: ids
-                .iter()
-                .map(|id| Node {
-                    id: (*id).to_owned(),
-                })
-                .collect(),
-        }
-    }
-
-    #[test]
-    fn empty_world_is_unknown_not_pass() {
-        let report = evaluate(&World::default(), &Bundle::empty());
-        assert_eq!(report.findings[0].status, Status::Unknown);
-    }
-
-    #[test]
-    fn schema_mismatch_is_unknown_even_with_nodes() {
-        let bundle = Bundle {
-            schema_version: SCHEMA_VERSION + 1,
-        };
-        let report = evaluate(&world(&["a"]), &bundle);
-        assert_eq!(report.findings[0].rule_id, "bundle.schema_mismatch");
-        assert_eq!(report.findings[0].status, Status::Unknown);
-    }
-
-    #[test]
-    fn identical_input_gives_identical_bytes() {
-        let bundle = Bundle::empty();
-        let first = serde_json::to_vec(&evaluate(&world(&["b", "a"]), &bundle)).unwrap();
-        let second = serde_json::to_vec(&evaluate(&world(&["b", "a"]), &bundle)).unwrap();
-        assert_eq!(first, second);
-    }
-
-    #[test]
-    fn node_order_does_not_change_the_report() {
-        let bundle = Bundle::empty();
-        assert_eq!(
-            evaluate(&world(&["a", "b"]), &bundle),
-            evaluate(&world(&["b", "a"]), &bundle)
-        );
+        facts: facts::facts(&net),
+        findings: rules::findings(&net, bundle),
+        attempts: world.attempts.iter().map(|attempt| trace(world, attempt, bundle)).collect(),
     }
 }

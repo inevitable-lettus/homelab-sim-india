@@ -1,0 +1,247 @@
+# Licensed CC BY-SA 4.0. See content/LICENSE.md.
+#
+# One title and one line for every reason the core can give. The line is what
+# the step log and the findings list show. Longer text lives in
+# content/explanations/<id>.md. The data build fails if a reason has no entry.
+
+# Ordinary steps.
+packet-sent:
+  title: Packet sent
+  line: The device sends the packet to its gateway.
+packet-forwarded:
+  title: Packet forwarded
+  line: This hop passes the packet on towards its destination.
+delivered:
+  title: Delivered
+  line: The packet reaches a service that is listening on that port.
+reply-delivered:
+  title: Reply delivered
+  line: The reply gets back to the device that asked.
+
+# NAT.
+nat-source-rewrite:
+  title: Router rewrites the source address
+  line: The router swaps the private source address for its own WAN address and remembers the swap.
+nat-mapping-hit:
+  title: Reply matches a remembered connection
+  line: The router finds the swap it remembered and sends the reply to the device inside.
+cgnat-mapping-created:
+  title: Carrier NAT remembers the connection
+  line: The ISP swaps the source for a shared public address and adds a row to its table.
+cgnat-mapping-hit:
+  title: Carrier NAT lets the reply in
+  line: The packet matches a row that an outbound packet created, so the ISP passes it in.
+cgnat-source-rewrite:
+  title: Carrier NAT reuses its row
+  line: The ISP already has a row for this connection and swaps the source for the shared public address again.
+cgnat-no-inbound-mapping:
+  title: Stopped at the ISP's carrier NAT
+  line: Nothing inside asked for this packet, so the ISP's carrier NAT has no row for it and drops it.
+nat-mapping-expired:
+  title: The remembered connection timed out
+  line: The row was removed after sitting idle too long, so the packet has nowhere to go.
+nat-timeout-unknown:
+  title: We don't have this timeout
+  line: We don't have data for how long this hop remembers an idle connection.
+port-forward-hit:
+  title: Port forward matched
+  line: The router has a forward for this port and sends the packet to the device it names.
+router-no-port-forward:
+  title: Stopped at the router
+  line: The router has no forward for this port and nothing inside asked for the packet, so it drops it.
+forward-target-missing:
+  title: The forward points at nothing
+  line: The forward names a home address that no device is using.
+
+# Routing and delivery.
+private-address-not-routable:
+  title: Private address on the internet
+  line: This address only means something inside a home network. The internet has no route to it.
+no-route-to-address:
+  title: No route
+  line: No network on the path knows where this address is.
+no-host-at-address:
+  title: Nobody at this address
+  line: The packet reaches the right network, but no device there has this address.
+no-service-on-port:
+  title: Nothing listening on that port
+  line: The device is there, but no service is listening on this port.
+service-loopback-only:
+  title: Service only listens to itself
+  line: The service is bound to loopback, so it accepts connections from its own device only.
+host-firewall-deny:
+  title: Blocked by the device's firewall
+  line: The device's own firewall refuses packets on this port.
+not-connected:
+  title: Not connected
+  line: This device has no cable or wireless link to anything.
+host-no-address:
+  title: No address
+  line: This device has no address of the kind it needs to send this packet.
+routing-loop:
+  title: Going in circles
+  line: The packet passed more hops than any real path needs, so it was dropped.
+packet-too-big-for-link:
+  title: Too big for this link
+  line: The packet is larger than the biggest one this link can carry.
+dns-name-not-found:
+  title: Name not found
+  line: No DNS record exists for this name.
+
+# IPv6.
+client-no-ipv6:
+  title: The client has no IPv6
+  line: The device that is dialling has no IPv6 address, so it cannot reach an IPv6 address.
+ipv6-not-available:
+  title: No IPv6 on this line
+  line: This line does not hand out IPv6 addresses.
+ipv6-no-nat:
+  title: No translation needed
+  line: IPv6 addresses are public end to end, so this hop forwards the packet unchanged.
+router-ipv6-firewall:
+  title: Blocked by the router's IPv6 firewall
+  line: The router drops inbound IPv6 that nothing inside asked for, unless a rule allows it.
+
+# Tunnels and overlays.
+tunnel-dials-out:
+  title: Tunnel dials out
+  line: The device opens the tunnel by sending the first packet outwards.
+tunnel-session-up:
+  title: Tunnel is up
+  line: Both ends have exchanged keys. The tunnel can carry traffic.
+tunnel-encapsulate:
+  title: Wrapped for the tunnel
+  line: The packet is encrypted and placed inside an outer packet addressed to the other end of the tunnel.
+tunnel-decapsulate:
+  title: Unwrapped
+  line: The outer packet is removed and the original packet comes out.
+relay-forwards:
+  title: Relay passes it on
+  line: The relay sends the packet down the connection the other device opened.
+relay-peer-offline:
+  title: The other device is not connected to the relay
+  line: The relay has no live connection from the device this packet is for.
+hub-forwards:
+  title: Hub passes it on
+  line: The hub decrypts the packet and sends it into the tunnel of the peer it is addressed to.
+host-not-forwarding:
+  title: This device does not forward
+  line: The packet is for someone else, and this device is not set up to pass packets on.
+tunnel-peer-no-endpoint:
+  title: No endpoint for the peer
+  line: The tunnel does not know where on the internet to find the other end.
+tunnel-handshake-failed:
+  title: Handshake got no answer
+  line: The opening packet of the tunnel did not reach the other end, so the tunnel never came up.
+tunnel-unknown-peer:
+  title: Peer not recognised
+  line: The other end does not list this device's public key, so it ignores the packet.
+tunnel-allowed-ips:
+  title: Address not allowed for this peer
+  line: The address is outside the peer's AllowedIPs, so the tunnel refuses the packet.
+tunnel-mtu-exceeded:
+  title: Too big for the tunnel
+  line: The packet is larger than the tunnel's MTU.
+overlay-peer-not-joined:
+  title: Not on the mesh
+  line: A mesh address only exists once the device has joined the mesh.
+
+# Unknowns.
+line-type-unknown:
+  title: We don't know what this line does
+  line: We don't have data for whether this line has its own public address, and the answer changes the result.
+unknown-node:
+  title: Missing from the board
+  line: This refers to something that is not on the board.
+
+# Rules.
+line-has-public-ipv4:
+  title: The line has its own public address
+  line: The router's WAN address is a public address, so the internet can send packets to it.
+wan-address-is-carrier-nat:
+  title: The line is behind carrier NAT
+  line: The router's WAN address is not public. The ISP shares one public address between many homes.
+port-forward-usable:
+  title: The port forward can be reached
+  line: Packets from the internet can reach this forward, and a service is listening behind it.
+forward-behind-cgnat:
+  title: The port forward cannot be reached
+  line: This forward is correct, but the ISP's carrier NAT drops inbound packets before they reach the router.
+forward-no-service:
+  title: The forward leads to nothing
+  line: The forward works, but no service is listening on the device and port it points at.
+service-exposed-to-internet:
+  title: This service is open to the whole internet
+  line: Anyone who finds the address and port can try to connect to this service.
+service-port-conflict:
+  title: Two services want the same port
+  line: Two services on one device are set to listen on the same port. Only one can have it.
+host-virtualization:
+  title: Can it run virtual machines?
+  line: Running a virtual machine needs a processor feature that the device must have.
+device-data-missing:
+  title: We don't have data for this device
+  line: We don't have data for this part of the device, so we can't say either way.
+tunnel-keepalive:
+  title: The tunnel stays open
+  line: The tunnel sends a small packet often enough to keep every NAT on the path remembering it.
+tunnel-keepalive-missing:
+  title: Nothing keeps the tunnel open
+  line: The tunnel sits behind NAT and sends nothing when idle, so the NAT will forget it.
+tunnel-keepalive-too-slow:
+  title: Keepalive is too slow
+  line: The tunnel's keepalive is longer than a NAT on the path waits before forgetting an idle connection.
+tunnel-mtu-fits:
+  title: Tunnel packets fit
+  line: The tunnel's packets, with their extra headers, fit on every link they cross.
+tunnel-mtu-too-big:
+  title: Tunnel packets are too big
+  line: With the tunnel's extra headers, full-size packets are too big for a link on the path.
+evaluation-did-not-settle:
+  title: The network did not settle
+  line: Addresses kept changing instead of settling. The board has a loop in it.
+world-empty:
+  title: Nothing on the board
+  line: There are no devices to check yet.
+bundle-schema-mismatch:
+  title: Data is from a different version
+  line: The data pack does not match this version of the simulator. Reload the page.
+
+# Goals and answers.
+goal-met:
+  title: Done
+  line: This goal is met.
+goal-not-met:
+  title: Not yet
+  line: This goal is not met yet.
+goal-too-slow:
+  title: It arrives, but too slowly
+  line: The packet gets there, but the round trip takes longer than the goal allows.
+goal-wrong-node:
+  title: It arrives at the wrong place
+  line: The packet was delivered, but not to the device the goal names.
+goal-unanswered:
+  title: Not answered yet
+  line: Pick an answer to this question.
+goal-wrong-answer:
+  title: Not quite
+  line: That is not what the trace shows. Run it again and look at where the packet stops.
+goal-unknown:
+  title: We can't tell
+  line: We don't have the data to decide this goal either way.
+
+# Graded files.
+artifact-missing:
+  title: File not found
+  line: The file this mission grades does not exist yet.
+artifact-invalid:
+  title: The file has mistakes
+  line: The file could not be read as the kind of config it should be.
+artifact-key-mismatch:
+  title: The keys do not match
+  line: The public key you registered does not belong to the private key in the config.
+
+# Concept pages that are not a reason on their own.
+three-addresses:
+  title: One home, three addresses
+  line: Your server has a home address, your router has a WAN address, and the internet sees a public address.

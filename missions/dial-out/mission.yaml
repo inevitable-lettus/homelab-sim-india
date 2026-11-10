@@ -1,0 +1,127 @@
+# Licensed CC BY-SA 4.0. See missions/LICENSE.md.
+id: dial-out
+order: 4
+title: Dial out to get in
+concept: Outbound connections, NAT mappings and a mesh VPN
+scenario: >-
+  Arjun's ISP drops anything that arrives uninvited. But it lets replies in, or
+  he could not browse the web at all. So let the server start the conversation:
+  it dials out to a relay, and the phone meets it there.
+guided:
+  brief: >-
+    Install the mesh VPN on both the server and the phone, by joining each to the
+    mesh. Each device then gets a mesh address. Point the phone at the server's
+    mesh address and press Run. Watch the first two legs: both devices dial out
+    before anything comes in.
+  hints:
+    - Tap the server and join it to the mesh. Do the same on the phone.
+    - A mesh address only means something to devices that have joined. Dial "The server's mesh address".
+    - If the packet still stops at the Home ISP, the phone is dialling the public address. Change what it dials.
+challenge:
+  brief: >-
+    Reach Jellyfin from the phone on a line behind carrier NAT, ten minutes after
+    the server last sent anything. You cannot change the ISP.
+  hints:
+    - Inbound is blocked, outbound is not. Which side can start the connection?
+layout:
+  wide: { phone: [0, 140], mobile: [210, 140], internet: [420, 140], whatismyip: [420, 280], isp: [630, 140], home-router: [840, 140], server: [1050, 140], relay: [420, 0] }
+  narrow: { phone: [0, 0], mobile: [0, 110], internet: [0, 220], whatismyip: [175, 275], isp: [0, 330], home-router: [0, 440], server: [0, 550], relay: [175, 165] }
+controls:
+  - kind: overlay_join
+    network: mesh
+    nodes: [server, phone]
+  - kind: dial
+    attempt: open-jellyfin
+    options:
+      - { label: "The home's public address", target: { kind: public_of, node: home-router } }
+      - { label: "The server's mesh address", target: { kind: overlay_of, node: server, network: mesh } }
+goals:
+  - id: open-jellyfin
+    text: The phone opens Jellyfin on the server
+    check: { kind: delivered, attempt: open-jellyfin, to: server }
+debrief:
+  did: >-
+    Both devices dialled out to a relay. Each outbound packet left a mapping in
+    every translator it crossed, and the mesh kept those mappings alive by
+    sending a small packet every 25 seconds. The phone's traffic then rode back
+    in along the server's own mapping. Nobody opened a port.
+  concept: cgnat-mapping-created
+  real_line: >-
+    Mesh VPNs such as Tailscale, ZeroTier and NetBird work this way. Install
+    one on the server and on your phone and sign in to the same account. Check
+    each project's current terms and limits yourself. In this model traffic
+    always goes through the relay. Real ones often manage a direct path, which
+    is faster.
+world:
+  nodes:
+    - kind: host
+      id: phone
+      label: Phone on mobile data
+      icon: phone
+      tunnels:
+        - { id: mesh, kind: overlay, network: mesh, enabled: false }
+    - kind: isp
+      id: mobile
+      label: Mobile network
+      ipv4: cgnat
+      public_pool: 198.51.100.0/24
+      cgnat_pool: 100.72.5.0/24
+      udp_timeout_s: 30
+    - kind: internet
+      id: internet
+      label: Internet
+    - kind: host
+      id: whatismyip
+      label: What-is-my-IP site
+      icon: site
+      static_ipv4: 192.0.2.80
+      services:
+        - { id: https, label: Website, proto: tcp, port: 443 }
+    - kind: host
+      id: relay
+      label: Mesh relay (Mumbai)
+      icon: relay
+      static_ipv4: 192.0.2.10
+    - kind: isp
+      id: isp
+      label: Home ISP
+      profile: teaching-fibre
+      ipv4: cgnat
+      public_pool: 203.0.113.0/24
+      cgnat_pool: 100.64.12.0/24
+      udp_timeout_s: 60
+    - kind: router
+      id: home-router
+      label: Home router
+      lan: 192.168.1.0/24
+      udp_timeout_s: 120
+    - kind: host
+      id: server
+      label: Jellyfin server
+      icon: server
+      device: old-laptop
+      static_ipv4: 192.168.1.20
+      services:
+        - { id: jellyfin, label: Jellyfin, proto: tcp, port: 8096 }
+      tunnels:
+        - { id: mesh, kind: overlay, network: mesh, enabled: false }
+  links:
+    # Lengths and rates are a teaching model: a hostel in Bengaluru, a home in
+    # Pune, and exchanges in Mumbai. Straight-line distances, rounded.
+    - { id: phone-mobile, a: phone, b: mobile, medium: cellular, length_m: 2000, rate_ab_bps: 8000000, rate_ba_bps: 20000000, load_permille: 200, extra_ns: 15000000 }
+    - { id: mobile-internet, a: mobile, b: internet, medium: backbone, length_m: 840000, rate_ab_bps: 10000000000, rate_ba_bps: 10000000000, load_permille: 300 }
+    - { id: site-internet, a: whatismyip, b: internet, medium: backbone, length_m: 5000, rate_ab_bps: 1000000000, rate_ba_bps: 1000000000 }
+    - { id: relay-internet, a: relay, b: internet, medium: backbone, length_m: 5000, rate_ab_bps: 1000000000, rate_ba_bps: 1000000000 }
+    - { id: isp-internet, a: isp, b: internet, medium: backbone, length_m: 120000, rate_ab_bps: 10000000000, rate_ba_bps: 10000000000, load_permille: 300 }
+    - { id: home-isp, a: home-router, b: isp, medium: fibre, length_m: 8000, rate_ab_bps: 50000000, rate_ba_bps: 100000000, load_permille: 100 }
+    - { id: server-home, a: server, b: home-router, medium: ethernet, length_m: 5, rate_ab_bps: 1000000000, rate_ba_bps: 1000000000 }
+  overlays:
+    - { id: mesh, label: Mesh VPN, relay: relay, range: 10.77.0.0/24 }
+  attempts:
+    - id: open-jellyfin
+      label: Open Jellyfin from the phone
+      from: phone
+      to: { kind: public_of, node: home-router }
+      proto: tcp
+      port: 8096
+      idle_s: 600

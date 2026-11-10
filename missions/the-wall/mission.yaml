@@ -1,0 +1,150 @@
+# Licensed CC BY-SA 4.0. See missions/LICENSE.md.
+id: the-wall
+order: 3
+title: The wall you can't see
+concept: "Carrier-grade NAT: why the same port forward fails"
+scenario: >-
+  Meera's cousin Arjun in Lucknow copied her setup exactly: same router, same
+  port forward, same Jellyfin. On his connection it does not work. Nothing on
+  his router looks wrong.
+guided:
+  brief: >-
+    The port forward is already in place. Press Run and watch where the packet
+    stops. Then tap the boxes and compare addresses. Answer both questions to
+    finish. You cannot make this connection work in this mission, and that is
+    the lesson.
+  hints:
+    - Watch the step log. The packet never reaches the home router.
+    - Tap the home router. Its WAN address starts with 100.64. That range is reserved for use inside an ISP. It is not a public address.
+    - Run "Ask a what-is-my-IP site from the server". The site sees a different address, one that the ISP shares between many customers.
+challenge:
+  brief: >-
+    The forward is correct and the connection still fails. Find the node that
+    stops it, and say what kind of line this is.
+  hints:
+    - Compare the router's WAN address with the address a website sees.
+layout:
+  wide: { phone: [0, 140], mobile: [210, 140], internet: [420, 140], whatismyip: [420, 280], isp: [630, 140], home-router: [840, 140], server: [1050, 140] }
+  narrow: { phone: [0, 0], mobile: [0, 110], internet: [0, 220], whatismyip: [175, 275], isp: [0, 330], home-router: [0, 440], server: [0, 550] }
+controls:
+  - kind: dial
+    attempt: open-jellyfin
+    options:
+      - { label: "The server's home address", target: { kind: lan_of, node: server } }
+      - { label: "The router's WAN address", target: { kind: wan_of, node: home-router } }
+      - { label: "The home's public address", target: { kind: public_of, node: home-router } }
+  - kind: port_forwards
+    router: home-router
+  - kind: question
+    question: blocked-at
+  - kind: question
+    question: line-type
+questions:
+  - id: blocked-at
+    prompt: Which box stopped the phone's packet?
+    options:
+      - { value: mobile, label: Mobile network }
+      - { value: internet, label: Internet }
+      - { value: isp, label: Home ISP }
+      - { value: home-router, label: Home router }
+      - { value: server, label: Jellyfin server }
+      - { value: nowhere, label: "Nothing stopped it" }
+    check: { kind: blocked_at, attempt: open-jellyfin }
+  - id: line-type
+    prompt: >-
+      Run "Ask a what-is-my-IP site from the server" and look at the last step.
+      Is the address the site saw the same as the home router's WAN address?
+    options:
+      - { value: same, label: "Same. This line has its own public address" }
+      - { value: different, label: "Different. Something upstream is sharing an address" }
+      - { value: cant-tell, label: "I can't tell" }
+    check: { kind: line_type, isp: isp }
+goals:
+  - id: blocked-at
+    text: Find the box that stops the packet
+    check: { kind: answer, question: blocked-at }
+  - id: line-type
+    text: Say whether this line has its own public address
+    check: { kind: answer, question: line-type }
+debrief:
+  did: >-
+    You found a second translator, inside the ISP, that Arjun cannot see or
+    configure. His router's WAN address is not public. The ISP shares one public
+    address between many homes and only lets replies back in. A port forward on
+    his router never gets the chance to act, because the packet is dropped one
+    hop earlier.
+  concept: cgnat-no-inbound-mapping
+  real_line: >-
+    If your router's WAN address starts with 100.64 to 100.127, or with 10., or
+    differs from what a "what is my IP" site shows, you are behind carrier NAT.
+    Port forwarding, DMZ and UPnP will not help. Your options are the next
+    missions: dial out with a mesh VPN or a tunnel, use IPv6, or ask the ISP
+    whether a public address is available.
+world:
+  nodes:
+    - kind: host
+      id: phone
+      label: Phone on mobile data
+      icon: phone
+    - kind: isp
+      id: mobile
+      label: Mobile network
+      ipv4: cgnat
+      public_pool: 198.51.100.0/24
+      cgnat_pool: 100.72.5.0/24
+      udp_timeout_s: 30
+    - kind: internet
+      id: internet
+      label: Internet
+    - kind: host
+      id: whatismyip
+      label: What-is-my-IP site
+      icon: site
+      static_ipv4: 192.0.2.80
+      services:
+        - { id: https, label: Website, proto: tcp, port: 443 }
+    - kind: isp
+      id: isp
+      label: Home ISP
+      profile: teaching-fibre
+      ipv4: cgnat
+      public_pool: 203.0.113.0/24
+      cgnat_pool: 100.64.12.0/24
+      udp_timeout_s: 60
+    - kind: router
+      id: home-router
+      label: Home router
+      lan: 192.168.1.0/24
+      udp_timeout_s: 120
+      port_forwards:
+        - { id: jellyfin, proto: tcp, external_port: 8096, to_ip: 192.168.1.20, internal_port: 8096 }
+    - kind: host
+      id: server
+      label: Jellyfin server
+      icon: server
+      device: old-laptop
+      static_ipv4: 192.168.1.20
+      services:
+        - { id: jellyfin, label: Jellyfin, proto: tcp, port: 8096 }
+  links:
+    # Lengths and rates are a teaching model: a hostel in Bengaluru, a home in
+    # Pune, and exchanges in Mumbai. Straight-line distances, rounded.
+    - { id: phone-mobile, a: phone, b: mobile, medium: cellular, length_m: 2000, rate_ab_bps: 8000000, rate_ba_bps: 20000000, load_permille: 200, extra_ns: 15000000 }
+    - { id: mobile-internet, a: mobile, b: internet, medium: backbone, length_m: 840000, rate_ab_bps: 10000000000, rate_ba_bps: 10000000000, load_permille: 300 }
+    - { id: site-internet, a: whatismyip, b: internet, medium: backbone, length_m: 5000, rate_ab_bps: 1000000000, rate_ba_bps: 1000000000 }
+    - { id: isp-internet, a: isp, b: internet, medium: backbone, length_m: 120000, rate_ab_bps: 10000000000, rate_ba_bps: 10000000000, load_permille: 300 }
+    - { id: home-isp, a: home-router, b: isp, medium: fibre, length_m: 8000, rate_ab_bps: 50000000, rate_ba_bps: 100000000, load_permille: 100 }
+    - { id: server-home, a: server, b: home-router, medium: ethernet, length_m: 5, rate_ab_bps: 1000000000, rate_ba_bps: 1000000000 }
+  attempts:
+    - id: open-jellyfin
+      label: Open Jellyfin from the phone
+      from: phone
+      to: { kind: public_of, node: home-router }
+      proto: tcp
+      port: 8096
+    - id: check-ip
+      label: Ask a what-is-my-IP site from the server
+      from: server
+      to: { kind: address, ip: 192.0.2.80 }
+      proto: tcp
+      port: 443

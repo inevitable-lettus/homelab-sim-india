@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { runEngineCheck, type Report } from './lib/sim';
+import { loadSim } from './lib/sim';
 import { sourceLink } from './lib/source';
 
 type EngineState =
   | { kind: 'running' }
-  | { kind: 'ready'; report: Report }
+  | { kind: 'ready'; missions: number }
   | { kind: 'failed'; message: string };
 
 export function App() {
@@ -12,9 +12,9 @@ export function App() {
 
   useEffect(() => {
     let active = true;
-    runEngineCheck()
-      .then((report) => {
-        if (active) setEngine({ kind: 'ready', report });
+    loadSim()
+      .then((bundle) => {
+        if (active) setEngine({ kind: 'ready', missions: Object.keys(bundle.missions).length });
       })
       .catch((error: unknown) => {
         if (active) setEngine({ kind: 'failed', message: String(error) });
@@ -44,6 +44,5 @@ export function App() {
 function EngineMessage({ engine }: { engine: EngineState }) {
   if (engine.kind === 'running') return 'Starting engine…';
   if (engine.kind === 'failed') return `Engine failed: ${engine.message}`;
-  const finding = engine.report.findings[0];
-  return finding ? `Engine ready: ${finding.rule_id} is ${finding.status}.` : 'Engine ready: no findings.';
+  return `Engine ready: ${engine.missions} missions loaded.`;
 }

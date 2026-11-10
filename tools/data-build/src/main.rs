@@ -1,23 +1,22 @@
-//! Emits the static data bundle. Phase 0 writes an empty bundle; Phase 3 reads
-//! and validates the YAML packs in data/.
+//! Builds the static data bundle from the YAML and Markdown in the repo.
+//! Usage: data-build [output.json] [repo-root]
 
-use std::{env, error::Error, fs, path::PathBuf};
+use std::{env, path::PathBuf, process::ExitCode};
 
-use sim_core::Bundle;
-
-fn main() -> Result<(), Box<dyn Error>> {
-    let output = env::args().nth(1).map_or_else(
-        || PathBuf::from("app/public/data/bundle.json"),
-        PathBuf::from,
-    );
-
-    if let Some(parent) = output.parent() {
-        fs::create_dir_all(parent)?;
+fn main() -> ExitCode {
+    let output = env::args().nth(1).map_or_else(|| PathBuf::from("app/public/data/bundle.json"), PathBuf::from);
+    let root = env::args().nth(2).map_or_else(|| PathBuf::from("."), PathBuf::from);
+    match data_build::build(&root).and_then(|bundle| data_build::write(&bundle, &output)) {
+        Ok(summary) => {
+            println!("wrote {} ({summary})", output.display());
+            ExitCode::SUCCESS
+        }
+        Err(errors) => {
+            for error in &errors {
+                eprintln!("error: {error}");
+            }
+            eprintln!("data build failed with {} problem(s)", errors.len());
+            ExitCode::FAILURE
+        }
     }
-
-    let mut json = serde_json::to_string_pretty(&Bundle::empty())?;
-    json.push('\n');
-    fs::write(&output, json)?;
-    println!("wrote {}", output.display());
-    Ok(())
 }

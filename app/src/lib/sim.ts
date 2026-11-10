@@ -1,38 +1,34 @@
 // The only module that talks to the Rust core. The UI renders what comes back
 // and never decides validity itself.
-import init, { evaluate_json } from '../wasm-pkg/sim_wasm';
+import init, { evaluate_json, grade_json, resolve_json, set_bundle } from '../wasm-pkg/sim_wasm';
+import type { Artifacts, Bundle, Depth, Grade, Id, Report, Resolved, Target, World } from './types';
 
-export type Status = 'pass' | 'fail' | 'unknown';
+let loading: Promise<Bundle> | undefined;
 
-export interface Finding {
-  rule_id: string;
-  status: Status;
-  severity: 'error' | 'warning' | 'info';
-  involved: string[];
-  explanation_id: string;
-  provenance: 'official' | 'community' | 'teaching' | 'line_check';
+/** Start the core and load the data bundle. Safe to call many times. */
+export function loadSim(): Promise<Bundle> {
+  loading ??= (async () => {
+    const [, response] = await Promise.all([init(), fetch(`${import.meta.env.BASE_URL}data/bundle.json`)]);
+    if (!response.ok) throw new Error(`Data bundle returned HTTP ${response.status}`);
+    const text = await response.text();
+    set_bundle(text);
+    return JSON.parse(text) as Bundle;
+  })();
+  return loading;
 }
 
-export interface Report {
-  schema_version: number;
-  findings: Finding[];
+// Everything below is synchronous and needs `loadSim()` to have resolved.
+
+export function evaluate(world: World): Report {
+  return JSON.parse(evaluate_json(JSON.stringify(world))) as Report;
 }
 
-export interface World {
-  nodes: { id: string }[];
+export function grade(mission: Id, depth: Depth, world: World, artifacts: Artifacts = { files: {} }): Grade {
+  return JSON.parse(
+    grade_json(mission, JSON.stringify(depth), JSON.stringify(world), JSON.stringify(artifacts)),
+  ) as Grade;
 }
 
-let ready: Promise<unknown> | undefined;
-
-export async function evaluate(world: World, bundleJson: string): Promise<Report> {
-  ready ??= init();
-  await ready;
-  return JSON.parse(evaluate_json(JSON.stringify(world), bundleJson)) as Report;
-}
-
-/** Proves the data bundle and the WASM core both reach the browser. */
-export async function runEngineCheck(): Promise<Report> {
-  const response = await fetch(`${import.meta.env.BASE_URL}data/bundle.json`);
-  if (!response.ok) throw new Error(`Data bundle returned HTTP ${response.status}`);
-  return evaluate({ nodes: [] }, await response.text());
+export function resolveTarget(world: World, target: Target): Resolved {
+  return JSON.parse(resolve_json(JSON.stringify(world), JSON.stringify(target))) as Resolved;
 }

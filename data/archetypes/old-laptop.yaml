@@ -1,0 +1,11 @@
+# A generic teaching machine. Not a product.
+id: old-laptop
+kind: archetype
+label: Old laptop used as a server
+capabilities:
+  arch: x86_64
+  ram_gb: 8
+  nic: [{ speed_mbps: 1000 }]
+  virtualization: true
+  igpu_transcode: unknown
+power: { idle_w: 12, load_w: 45 }

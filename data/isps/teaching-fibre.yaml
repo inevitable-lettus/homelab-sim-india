@@ -1,0 +1,12 @@
+# A made-up provider for teaching. It makes no claim about any real ISP.
+# Real, sourced profiles arrive in Phase 3.
+id: teaching-fibre
+label: Teaching ISP (not a real provider)
+kind: teaching
+note: >-
+  Invented for the missions. Its behaviour is typical of what the track
+  teaches, not a statement about any company.
+claims:
+  ipv4_cgnat: { value: "yes" }
+  static_ipv4: { value: "no" }
+  ipv6_default: { value: "no" }
