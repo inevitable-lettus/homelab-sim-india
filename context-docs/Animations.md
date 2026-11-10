@@ -30,7 +30,7 @@ graph LR
 
 `TimelinePlayer` owns the clock and exposes `play`, `pause`, `seek`, `stepForward`, `stepBack` and `setSpeed`. Packet position comes from `getPointAtLength` on the React Flow edge's path, and is applied as a `transform` on one overlay element above the board. The Web Animations API covers simple one-off transitions. No animation library at the start; add one only if a real need appears.
 
-If the board is panned or resized during playback, positions are re-read from the edge paths.
+The overlay element lives inside React Flow's viewport (`ViewportPortal`), so it is positioned in flow coordinates and follows pan and zoom with no re-reading. The Phase 1 spike measured 0 px of drift. The label is counter-scaled by `1 / zoom` so it stays the same size on screen, and it flips sides near the board edge.
 
 ## Tokens (starting values)
 
@@ -54,7 +54,7 @@ If the board is panned or resized during playback, positions are re-read from th
 | Moment | What the learner sees | Teaches |
 |---|---|---|
 | Packet hop | A labelled packet travels along a cable to the next node | Path, one hop at a time |
-| **NAT rewrite** | Packet pauses at the router; the source address visibly changes, old value to new | NAT changes addresses |
+| **NAT rewrite** | Packet pauses at the router; the source address visibly changes: old value struck through above, new value below. Never cross-fade them in the same place | NAT changes addresses |
 | **Mapping created** | An outbound packet adds a row to the NAT table at that node | Why replies can return |
 | **CGNAT wall** | An inbound packet reaches the ISP's carrier NAT, finds no mapping row, and stops there, short of the home router | The forward at home never had a chance |
 | Port forward hit | Inbound packet matches a highlighted forward rule | What a forward does |
@@ -86,7 +86,7 @@ Every lesson must be fully understandable in this mode. This is a requirement, n
 
 ## Performance
 
-- Target 60 fps on desktop, and at least 30 fps on a low-end Android phone (Phase 1 spike).
+- Target 60 fps on desktop, and at least 30 fps on a low-end Android phone. The Phase 1 spike held 60 fps under 6x CPU throttling in desktop Chrome; a real phone is still untested.
 - One overlay layer for packets. Apply `will-change: transform` only during playback.
 - Stop the clock when paused or when the tab is hidden.
 - Never run traces or evaluate rules inside a frame callback. Compute first, then play.

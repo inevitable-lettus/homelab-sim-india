@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Spike 1: terminal</title>
+    <style>
+      body { font: 14px system-ui, sans-serif; margin: 16px; max-width: 760px; }
+      pre { background: #111; color: #ddd; padding: 8px; overflow: auto; font: 12px/1.35 ui-monospace, monospace; }
+      #term { height: 320px; white-space: pre-wrap; outline: none; }
+      #term:focus { box-shadow: 0 0 0 2px #4a90d9; }
+      button { font: inherit; padding: 6px 10px; margin-right: 6px; }
+    </style>
+  </head>
+  <body>
+    <h1>Spike 1: real terminal, graded files</h1>
+    <p>
+      Modes: <a href="?">cold boot</a> · <a href="?state=256">saved state 256 MB</a> ·
+      <a href="?state=128">saved state 128 MB</a>. Add <code>&amp;auto=1</code> to run the script.
+    </p>
+    <p id="status">starting…</p>
+    <pre id="term" tabindex="0"></pre>
+    <p>
+      <button id="write">Write wg0.conf in guest</button>
+      <button id="read">read_file /root/wg0.conf</button>
+    </p>
+    <pre id="host">(host side: nothing read yet)</pre>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

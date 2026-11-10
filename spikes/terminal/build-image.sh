@@ -3,7 +3,8 @@
 # Output goes to spikes/terminal/images/ (gitignored). Needs Docker running.
 set -euo pipefail
 
-V86_COMMIT="${V86_COMMIT:-master}"
+# Pinned: must match the v86 npm version in app/package.json (0.5.473+g315b2b0).
+V86_COMMIT="${V86_COMMIT:-315b2b0b758703ef0e6cc7b4088d6068f83f3c20}"
 PACKAGES="wireguard-tools openssh-client-default iproute2 curl nano"
 
 HERE="$(cd "$(dirname "$0")" && pwd)"

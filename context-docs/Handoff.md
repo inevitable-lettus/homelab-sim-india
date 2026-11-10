@@ -4,7 +4,11 @@ Living state and build order. **Read this first in every session, and update it 
 
 ## Current status (2026-11-10)
 
-**Phase 0 is done.** Repo: <https://github.com/inevitable-lettus/homelab-sim-india>. Preview: <https://inevitable-lettus.github.io/homelab-sim-india/>. CI and deploy passed on the first push, and the deployed page runs the Rust core, loads the data bundle and links to its exact source commit. Spike 3 of Phase 1 is also done. **Next action: the rest of Phase 1, using [Phase1-Brief.md](Phase1-Brief.md).**
+**Phases 0 and 1 are done.** Repo: <https://github.com/inevitable-lettus/homelab-sim-india>. Preview: <https://inevitable-lettus.github.io/homelab-sim-india/>. The deployed page runs the Rust core, loads the data bundle and links to its exact source commit. Phase 1 confirmed v86 as the terminal engine and React Flow for the board. Results are under Phase 1 below.
+
+**Owner's build order (2026-11-10), which overrides the phase numbering:** Part 1 is Phases 1, 4, 5, 6, 7, with only the minimum Phase 2 and 3 material the code needs (Rust schema types, short specs for Missions 1 to 5, a few archetypes, one clearly labelled teaching ISP profile with no real-ISP claims). Part 2 is Phases 2, 3 and 8. Part 3 is Phase 9. The owner approves between parts.
+
+**Next action: the minimum Phase 2 and 3 material, then Phase 4.**
 
 `docs/ideation.md` is a local-only snapshot of the original ideation doc, deliberately kept out of the public repo. **Where it conflicts with these context docs, these win.** It predates the India focus and most decisions below.
 
@@ -66,7 +70,7 @@ Create git repo, Cargo workspace (`sim-core`, `sim-wasm`, `data-build`), Vite + 
 
 **Done =** a static build of a page that calls a Rust `evaluate` stub through WASM, deployed to a preview URL, with CI running `cargo test`, type checks and lint.
 
-### Phase 1: Spikes (throwaway code, written conclusions)
+### Phase 1: Spikes (done 2026-11-10)
 
 1. **Terminal:** boot a small v86 Linux image in the browser, write a WireGuard config in it, read it back through `read_file`. Measure download size and boot time.
 2. **Trace playback:** a moving labelled packet along React Flow edges on a low-end Android phone.
@@ -74,6 +78,67 @@ Create git repo, Cargo workspace (`sim-core`, `sim-wasm`, `data-build`), Vite + 
 4. **Budget check:** confirm or revise the budgets, and test the phone and metered-data assumption.
 
 **Done =** each result recorded in this file, the engine chosen, and budgets updated.
+
+**Outcome:** engine is **v86**, started from a **saved state** with 128 MB guest RAM. The board is **React Flow** with the packet overlay inside its viewport. No real phone was available: every "low-end" number below is headless Chrome 6x CPU throttling on an Apple M4, which slows script but not the GPU, storage or memory. Rerun on a real phone before trusting them. Reproduce with `cd spikes && npm install && node measure.mjs` (needs installed Chrome and the local image).
+
+#### Spike 1 result: terminal (done 2026-11-10)
+
+Works. The guest ran `wg genkey`, wrote `/root/wg0.conf`, and `read_file` returned it on the host.
+
+| Measure | Cold boot | Saved state |
+|---|---|---|
+| Time to prompt, unthrottled | 18.1 s | 0.13 s |
+| Time to prompt, 6x CPU throttle | 83.4 s | 0.79 s |
+| Image download to reach a prompt and run the test | 16.6 MB in 828 requests | 12.4 MB in 14 requests |
+| With engine (`libv86.mjs` 94 KB + `v86.wasm` 380 KB, gzipped) | 17.0 MB | **12.9 MB** |
+
+- Times exclude download, because the test server was local. Arithmetic only: 12.9 MB takes about 10 s at 10 Mbit/s and about 52 s at 2 Mbit/s.
+- The saved state is 11.4 MB (zstd -19) and is nearly the same size for 128 MB and 256 MB guests. A state boot needs no BIOS and no kernel fetch, and then pulls about 0.9 MB of files on demand.
+- **Memory:** the renderer process used 400 to 815 MB RSS across five runs (noisy, measured with `ps` after the test). That is a real risk on phones with 2 to 3 GB of RAM, and is not tested on one.
+- **Cross-origin isolation is not needed.** `crossOriginIsolated` was false and everything worked, so GitHub Pages is enough.
+- **`read_file` sees guest writes at once** with `cache=loose`, before any `sync`, for a 92-byte and a 405 KB file. No cache-mode change needed.
+- The same test passed in Node (`spikes/terminal/build-state.mjs`), which is how the state is built. CI can build it without a browser.
+
+Gotchas for Phase 7:
+- The prompt is `(none):~# ` followed by `ESC[6n` (a cursor query), not `localhost:~# ` as v86's own script expects. Waiting for the wrong prompt looks like a hang. Set the hostname in the image and use a real terminal emulator that answers the query.
+- A state only works with the exact engine build, `alpine-fs.json` and rootfs it was saved with. Version them as one set. `build-image.sh` is now pinned to v86 commit `315b2b0`, which matches the npm package `0.5.473+g315b2b0`.
+- The spike terminal is a bare `<pre>`. Phase 7 needs a terminal emulator such as xterm.js for `nano`. Its size is not measured yet.
+- The local image is 1,430 files; the largest are 7.6 MB (rootfs chunk) and 11.4 MB (state). Check these against the host's per-file and file-count limits in Phase 7.
+
+#### Spike 2 result: trace playback (done 2026-11-10)
+
+Works. A labelled packet follows the fixture's edges with play, pause, step and speed, shows the NAT rewrites and stops at the carrier NAT.
+
+| Run (headless Chrome, production build) | Playback | Playback while panning and zooming | Script per frame |
+|---|---|---|---|
+| Desktop 1280x800 | 60 fps, worst frame 16.8 ms | 60 fps | 0.012 ms |
+| 360x740 at 3x pixel ratio, touch | 60 fps | 60 fps | 0.012 ms |
+| Same, 6x CPU throttle | 60 fps, worst frame 16.8 ms | 60 fps | 0.069 ms |
+| Same, 20x CPU throttle | 60 fps | 60 fps | 0.262 ms |
+
+- The throttle was real: a fixed busy loop took 18 ms, 98 ms and 347 ms at 1x, 6x and 20x.
+- **React Flow costs 69.2 KB of JS and 3.0 KB of CSS, gzipped.** The whole spike page (React, React DOM, React Flow, spike code) is 129 KB of JS gzipped.
+- **Pan and zoom stay correct with no extra work.** The packet element sits in React Flow's `ViewportPortal`, so it is positioned in flow coordinates and moves with the board. Measured error between the packet and its point on the edge was 0 px over about 240 frames per run, with mouse drag and wheel on desktop and touch drag and pinch on mobile.
+- Edge path selector: `.react-flow__edge[data-id="…"] .react-flow__edge-path`. `getPointAtLength` gives flow coordinates. No HLBuilder code was needed.
+
+Findings that change the design:
+- **A five-node horizontal board does not work at 360px.** It fits only at about 0.33 zoom, where node labels are unreadable. Phone boards need their own layout: stacked, with at most three nodes across.
+- The packet label is counter-scaled by `1 / zoom` so it stays readable at any zoom. It clips at the board edge and must flip sides there.
+- Cross-fading the old and new address in the same place is unreadable halfway. Show the old value struck through above the new one.
+- `ViewportPortal` mounts after the first effect, so refs into it are null at first.
+- In a Node script, Vite's `createServer` sets `NODE_ENV=development`, and a later `build` in the same process then bundles the development React. Set it back before building.
+
+#### Spike 4 result: budgets (done 2026-11-10)
+
+| Budget | Before | Now | Measured |
+|---|---|---|---|
+| App + core, gzipped, before any mission | under 500 KB | unchanged | 104 KB today; about 176 KB once React Flow is in |
+| `evaluate` on a mission-sized world | under 16 ms on a low-end Android phone | unchanged | Not measurable until Phase 4 |
+| Guest image first download | under 30 MB | **under 20 MB, saved state only** | 12.9 MB |
+| Terminal time to prompt after download | none | **under 3 s on a low-end phone** | 0.8 s at 6x throttle |
+| Packet playback | 30 fps on a low-end phone | unchanged | 60 fps at 6x throttle |
+
+The phone and metered-data assumption is **still untested**: no phone was used and no learner was asked. It stays an open question for Phase 6. What changed is the plan for phones: the terminal's memory use means the file editor should be the default there, with the terminal as an opt-in.
 
 #### Spike 3 result: HLBuilder audit (done 2026-11-10, commit `2bf4c28736a99d45c6440411ee6fac8f3c3f5c89`)
 
@@ -164,6 +229,7 @@ Community ISP reports through GitHub Discussions with a structured form (ISP, ci
 - **PATH:** Rust came from Homebrew's `rustup`, which isn't on the shell PATH. The npm scripts handle it through `scripts/env.sh`. For direct `cargo` use: `export PATH="$HOME/.cargo/bin:/opt/homebrew/opt/rustup/bin:$PATH"`.
 - **Toolchain:** Rust 1.99.1 pinned in `rust-toolchain.toml`. `wasm-bindgen` CLI pinned to the crate version in `Cargo.toml`, used directly instead of wasm-pack. TypeScript is 6.x because `typescript-eslint` does not support 7 yet.
 - **Generated, gitignored:** `app/src/wasm-pkg/`, `app/public/data/`. Run `npm run wasm` and `npm run data` after pulling Rust changes.
-- **Terminal image:** `bash spikes/terminal/build-image.sh` needs Docker running. Built on 2026-11-10 into `spikes/terminal/images/` (gitignored): 1,430 files, 43 MB compressed on disk. Booting it in v86 is **not tested yet**. That is Spike 1. 43 MB is over the 30 MB budget only if a learner fetches every file. v86 fetches files on demand, so Spike 1 must measure the real first download.
+- **Terminal image:** `bash spikes/terminal/build-image.sh` needs Docker running. Built on 2026-11-10 into `spikes/terminal/images/` (gitignored): 1,430 files, 43 MB compressed on disk, of which a learner fetches about 12 MB. `MEM_MB=128 node spikes/terminal/build-state.mjs` builds the saved state next to it (needs `zstd`). Both are local only until Phase 7 publishes them through CI.
+- **Spikes:** `spikes/` has its own `package.json` and is not an npm workspace, so `npm ci` at the root ignores it. Pages: `cd spikes && npm run dev`, then `/terminal/` and `/trace/`. Nothing in `app/src` imports from it. Keep it until Phase 7 has what it needs.
 - **Known:** `npm audit` reports 10 moderate findings, all one `minimatch` issue inside ESLint tooling. Dev-only, not shipped.
 - **Update rule:** at the end of each phase, update Current status, mark the phase done with the date, and record gotchas here. Change Architecture, Design or Animations only when the design itself changes.

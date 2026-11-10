@@ -2,6 +2,8 @@
 
 Self-contained task sheet. **Read this file only**, plus the Architecture sections named below when a step needs them. Do not re-read the ideation doc or research prior art. That work is done.
 
+**Phase 1 is done (2026-11-10). Results are in Handoff.md. This file is kept for reference.**
+
 Goal: answer three risky questions with throwaway code, write the answers into [Handoff.md](Handoff.md), and stop. **Do not build Phase 2 onward. Do not refactor Phase 0.**
 
 ## Already done, do not redo

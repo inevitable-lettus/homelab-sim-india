@@ -133,7 +133,14 @@ interface TerminalHost {
 }
 ```
 
-**Default engine: [v86](https://github.com/copy/v86)** (BSD-2-Clause). It exposes `read_file`, `create_file` and `serial0_send`. A code search of its repo found no `SharedArrayBuffer` use, so it should work without cross-origin isolation headers. Limit: 32-bit guest. [container2wasm](https://github.com/container2wasm/container2wasm) (Apache-2.0) is the fallback. The Phase 1 spike confirms the choice. Keep the interface engine-neutral.
+**Engine: [v86](https://github.com/copy/v86)** (BSD-2-Clause), confirmed by the Phase 1 spike. It exposes `read_file`, `create_file` and `serial0_send`. It runs without cross-origin isolation headers (measured). Limit: 32-bit guest. [container2wasm](https://github.com/container2wasm/container2wasm) (Apache-2.0) was the fallback and was not needed. Keep the interface engine-neutral.
+
+Rules from the spike (numbers in [Handoff.md](Handoff.md), Phase 1):
+
+- **Always start from a saved state.** A cold boot took 83 s under 6x CPU throttling; the saved state took under 1 s. The state is built in Node, so CI can produce it.
+- The engine build, the filesystem index, the rootfs and the state are **one versioned set**. A state does not load against a different build of any of the others.
+- Guest RAM is 128 MB. The browser tab still used 400 to 815 MB, so on phones the file editor is the default and the terminal is an opt-in.
+- `read_file` sees guest writes immediately with the 9p option `cache=loose`. Grading does not need the learner to run `sync`.
 
 Because grading reads artifacts rather than the VM, a **plain text editor can stand in for the terminal** on devices that cannot run it. The same grader applies.
 
@@ -204,15 +211,17 @@ Validity logic must not be copied into the UI, even if it exists there, because 
 
 ## Hosting and budgets
 
-Static hosting on Cloudflare Pages or GitHub Pages. Prefer Cloudflare Pages if the spike finds cross-origin isolation headers are needed, since GitHub Pages cannot set them.
+Static hosting on GitHub Pages or Cloudflare Pages. The Phase 1 spike found cross-origin isolation headers are not needed, so GitHub Pages is enough. Check the guest image against the host's file-count and per-file limits in Phase 7.
 
-Starting targets, to be confirmed against real devices in Phase 1:
+Targets, revised after Phase 1. "Low-end phone" has so far only been approximated with 6x CPU throttling in desktop Chrome, not measured on a phone:
 
 | Budget | Target |
 |---|---|
 | App + core, gzipped, before any mission | under 500 KB |
 | `evaluate` on a mission-sized world | under 16 ms on a low-end Android phone |
-| Guest image first download | under 30 MB, shown before starting |
+| Guest image first download, engine included | under 20 MB, from a saved state, shown before starting (measured 12.9 MB) |
+| Terminal time to prompt, after download | under 3 s on a low-end Android phone |
+| Packet playback | at least 30 fps on a low-end Android phone |
 
 Service-worker caching keeps repeat visits cheap on metered connections. Progress lives in browser storage with every access wrapped in try/catch, plus JSON export and import, because browser storage can be cleared.
 

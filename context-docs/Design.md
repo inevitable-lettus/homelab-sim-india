@@ -117,10 +117,11 @@ Starting list. Detailed specs belong in `curriculum/`.
 
 ## Device and network constraints
 
-Assume many learners use **phones, low-end Android and metered data**. This is an assumption to test in Phase 1.
+Assume many learners use **phones, low-end Android and metered data**. Phase 1 could not test this: no phone was used and no learner was asked. It stays an assumption until Phase 6.
 
 - The core experience needs no large download.
-- The terminal is optional per session and states its download size before starting. It falls back to the file editor.
+- The terminal is optional per session and states its download size before starting (about 13 MB). It falls back to the file editor. On phones the file editor is the default, because the terminal needs several hundred MB of memory.
+- Boards have a separate phone layout: stacked, at most three nodes across. A wide board zoomed out to fit 360px has unreadable labels (Phase 1 spike).
 - Touch: tap port, then tap port, to connect. Dragging is an extra, never the only way.
 - Tap targets of at least 44px. No horizontal page scroll at 360px.
 

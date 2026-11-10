@@ -1,0 +1,13 @@
+{
+  "name": "homelab-sim-spikes",
+  "private": true,
+  "type": "module",
+  "description": "Throwaway Phase 1 spikes. Not part of the app build or the npm workspace.",
+  "scripts": {
+    "dev": "vite --config vite.config.js",
+    "measure": "node measure.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "1.65.0"
+  }
+}
