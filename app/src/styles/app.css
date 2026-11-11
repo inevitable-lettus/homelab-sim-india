@@ -1620,6 +1620,10 @@ dd.facts__note {
 .track__list {
   border-top: 1px solid var(--line);
 }
+.track__head .track__soon {
+  color: var(--ink);
+  font-weight: 620;
+}
 .track__item {
   display: flex;
   align-items: center;

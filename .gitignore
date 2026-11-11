@@ -26,3 +26,6 @@ docs/ideation.md
 # Playwright
 app/test-results/
 app/playwright-report/
+
+# Data drafts waiting for review (Data-Backlog.md)
+data-drafts/

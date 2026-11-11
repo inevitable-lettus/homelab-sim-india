@@ -58,6 +58,14 @@ function BlockedDemo({ mission, bundle }: { mission: Mission; bundle: Bundle }) 
   );
 }
 
+/** What the sandbox will answer about a build. Not built yet. */
+const SANDBOX_QUESTIONS = [
+  ['Will it run?', 'Does this system boot on this machine, and is there a build of the app for it'],
+  ['Will it fit?', 'Enough memory, drive bays, USB and Ethernet ports'],
+  ['Will it connect?', 'From your phone on mobile data, on your kind of line'],
+  ['Will it last?', 'Electricity cost in your state, power cuts, a laptop plugged in all year'],
+] as const;
+
 export function Home({ bundle }: { bundle: Bundle }) {
   const saved = useProgress();
   const track = bundle.tracks[0];
@@ -152,6 +160,34 @@ export function Home({ bundle }: { bundle: Bundle }) {
             </ol>
           </section>
         )}
+
+        <section className="track" aria-labelledby="build-title">
+          <div className="track__head">
+            <h2 id="build-title">Build your own</h2>
+            <p>
+              Plan a homelab from parts you can get in India, such as an old laptop, a mini PC or a phone in a drawer. Say
+              what you want it to do, and see what works, what won't, and what we can't tell yet, before you spend
+              anything.
+            </p>
+            <p className="track__soon">Coming soon. It is being built in the open, in the same repository.</p>
+          </div>
+          <ul className="track__list">
+            {SANDBOX_QUESTIONS.map(([title, detail]) => (
+              <li key={title}>
+                <div className="track__item track__item--planned">
+                  <span className="track__what">
+                    <span className="track__title">{title}</span>
+                    <span className="track__concept">{detail}</span>
+                  </span>
+                  <span className="track__state">
+                    <LockIcon size={16} />
+                    Soon
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
       </main>
 
       <footer className="sitefoot">

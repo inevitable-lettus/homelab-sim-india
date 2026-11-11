@@ -631,3 +631,46 @@ fn the_data_build_refuses_a_reason_with_no_words() {
     let errors = data_build::build(&dir).expect_err("must fail");
     assert!(errors.iter().any(|e| e.contains("no text for `cgnat-no-inbound-mapping`")), "{errors:?}");
 }
+
+// ------------------------------------------- Mission reports stay the same
+
+/// Grades of every mission, at both depths, from its starting world and from
+/// a solved one, plus a world that exercises a device pack. Schema changes
+/// must not move a byte of these. To accept a deliberate change, run the test
+/// with `UPDATE_MISSION_FIXTURES=1` and review the diff.
+#[test]
+fn mission_reports_match_the_recorded_fixtures() {
+    let mut out = std::collections::BTreeMap::new();
+    for m in bundle().missions.values() {
+        for depth in [Depth::Guided, Depth::Challenge] {
+            let name = |state: &str| format!("{}/{}/{state}", m.id, format!("{depth:?}").to_lowercase());
+            let graded = |world: &World| {
+                serde_json::to_value(sim_core::grade(m, depth, world, &Artifacts::default(), bundle())).expect("json")
+            };
+            out.insert(name("start"), graded(&m.world));
+            let mut solved = m.world.clone();
+            join_all(&mut solved);
+            if let Some(router) = solved.router_mut("home-router") {
+                router.port_forwards = vec![forward(8096, "192.168.1.20", 8096)];
+            }
+            if solved.attempt_mut("open-jellyfin").is_some() {
+                dial(&mut solved, if m.id == "dial-out" { mesh() } else { public() });
+            }
+            out.insert(name("solved"), graded(&solved));
+        }
+    }
+    for device in ["old-laptop", "single-board-computer", "never-heard-of-it"] {
+        let report = sim_core::evaluate(&vm_on(device), bundle());
+        out.insert(format!("vm-on/{device}"), serde_json::to_value(report).expect("json"));
+    }
+    // One entry per line, so a change shows up as one changed line.
+    let lines: Vec<String> = out.iter().map(|(name, value)| format!("{name}\t{value}")).collect();
+    let text = lines.join("\n") + "\n";
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/mission-reports.tsv");
+    if std::env::var_os("UPDATE_MISSION_FIXTURES").is_some() {
+        fs::create_dir_all(path.parent().expect("parent")).expect("mkdir");
+        fs::write(&path, &text).expect("write");
+    }
+    let recorded = fs::read_to_string(&path).expect("fixture file exists");
+    assert!(recorded == text, "mission reports changed. Compare against {}", path.display());
+}

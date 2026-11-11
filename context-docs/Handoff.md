@@ -8,7 +8,7 @@ Living state and build order. **Read this first in every session, and update it 
 
 **Owner's build order (2026-11-10), which overrides the phase numbering:** Part 1 is Phases 1, 4, 5, 6, 7, with only the minimum Phase 2 and 3 material the code needs (Rust schema types, short specs for Missions 1 to 5, a few archetypes, one clearly labelled teaching ISP profile with no real-ISP claims). Part 2 is Phases 2, 3 and 8. Part 3 is Phase 9. The owner approves between parts.
 
-**Next action: Phase S1 (schema v4 and data build)**, then S2 to S5 (the "Build your own" sandbox, added 2026-11-11, spec in [Sandbox.md](Sandbox.md)), then Phases 6 and 7. Data for the sandbox is listed in [Data-Backlog.md](Data-Backlog.md) and is worked by agents slowly, in parallel, one pack at a time.
+**Owner's change of order (2026-11-11, later the same day):** the sandbox is parked until Phases 6 and 7 are done and something is online for people to see. The site says "Build your own: coming soon". **Next action: Phase 7 (terminal missions)**, then the Part 1 report and the owner's approval, then S1 to S5 (spec in [Sandbox.md](Sandbox.md)). Data for the sandbox is listed in [Data-Backlog.md](Data-Backlog.md) and is worked by agents slowly, in parallel, one pack at a time.
 
 `docs/ideation.md` is a local-only snapshot of the original ideation doc, deliberately kept out of the public repo. **Where it conflicts with these context docs, these win.** It predates the India focus and most decisions below.
 
@@ -256,9 +256,17 @@ Gotchas for later phases:
 
 Specified in full in [Sandbox.md §14](Sandbox.md#14-build-phases-s1-to-s5), with each phase's done criteria. In short: **S1** schema v4 and data build, **S2** world additions, intents and fit rules, **S3** power, **S4** sandbox UI, **S5** templates and first real data. S1 to S3 are core-only and can start once the uncommitted Phase 5 work is committed. S4 needs the Phase 5 board. S5 needs the P0 items of [Data-Backlog.md](Data-Backlog.md).
 
+**Parked on 2026-11-11 before any schema code was written.** What exists for it:
+
+- `tools/data-build/tests/fixtures/mission-reports.tsv` and the test `mission_reports_match_the_recorded_fixtures`: every mission's grade at both depths, from its starting and a solved world, plus three device-pack worlds. S1's "mission reports byte-identical" check is this test. Update it only with `UPDATE_MISSION_FIXTURES=1` and a reviewed diff.
+- `data-drafts/` (gitignored): P0 data drafted by four research agents on 2026-11-11, each pack with an `.evidence.md` file. **Unreviewed.** Nothing in it may enter `data/` until S1 can validate it and a reviewer has opened every source. `data-drafts/README.md` holds the conventions the agents were given, including these refinements of Sandbox.md §4 that S1 should adopt or reject: `power.input` is tagged by `kind`; `adapter.provides` is one struct with `nic`, `bays` and `usb` (a hub provides more than one); `client.plays`, `client.apps` and `adapter.provides` are `Cap` values so a real device's claim has a source.
+- Planned for S1 and not built: `schemars` behind a `schema` feature of `sim-core` for JSON Schema, `serde_path_to_error` in the data build for field paths in errors, and a macro that declares each all-`Cap` section struct together with its "every value sourced" check.
+
 **Done =** S5's done criteria, and this file updated with measured catalog size and gotchas.
 
-### Phase 6: First learner test (gate)
+### Phase 6: First learner test (gate): kit written 2026-11-11, test not run
+
+**Status:** Missions 1 to 4 are live on the preview URL, and [curriculum/learner-test-kit.md](../curriculum/learner-test-kit.md) has the facilitator script, the tasks, what to observe, a five-point rubric for "can they explain CGNAT", the note sheet and the gate table. **No learner has been tested.** An agent cannot do that part. The gate below is still open, and building continued past it on the owner's instruction.
 
 Ship Missions 1–3 without the terminal, and the sandbox if S1 to S5 are done. Put them in front of about five real learners from the target groups, watch them, and check whether they can explain CGNAT afterwards, and whether they can plan a build and read its report.
 
