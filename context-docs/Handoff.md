@@ -2,13 +2,13 @@
 
 Living state and build order. **Read this first in every session, and update it at the end of every phase.** Any session can pick up at the first phase not done. Phases are dependency-ordered, and each ends with its tests green.
 
-## Current status (2026-11-10)
+## Current status (2026-11-11)
 
-**Phases 0, 1 and 4 are done**, with the minimum Phase 2 and 3 material Phase 4 needed. Repo: <https://github.com/inevitable-lettus/homelab-sim-india>. Preview: <https://inevitable-lettus.github.io/homelab-sim-india/>. The deployed page runs the Rust core, loads the data bundle (four missions) and links to its exact source commit. It has no mission UI yet. Phase 1 confirmed v86 as the terminal engine and React Flow for the board. Results are under Phase 1 below.
+**Phases 0, 1, 4 and 5 are done**, with the minimum Phase 2 and 3 material they needed. Repo: <https://github.com/inevitable-lettus/homelab-sim-india>. Preview: <https://inevitable-lettus.github.io/homelab-sim-india/>. The deployed site has a landing page, the track map and Missions 1 to 4, playable on desktop and at 360px, with trace playback, a step log, findings, debriefs, concept pages, settings and local progress. Phase 1 confirmed v86 as the terminal engine and React Flow for the board.
 
 **Owner's build order (2026-11-10), which overrides the phase numbering:** Part 1 is Phases 1, 4, 5, 6, 7, with only the minimum Phase 2 and 3 material the code needs (Rust schema types, short specs for Missions 1 to 5, a few archetypes, one clearly labelled teaching ISP profile with no real-ISP claims). Part 2 is Phases 2, 3 and 8. Part 3 is Phase 9. The owner approves between parts.
 
-**Next action: Phase 5 (mission UI and playback).** Then Phases S1 to S5 (the "Build your own" sandbox, added 2026-11-11, spec in [Sandbox.md](Sandbox.md)), then Phases 6 and 7. Data for the sandbox is listed in [Data-Backlog.md](Data-Backlog.md) and is worked by agents slowly, in parallel, one pack at a time.
+**Next action: Phase S1 (schema v4 and data build)**, then S2 to S5 (the "Build your own" sandbox, added 2026-11-11, spec in [Sandbox.md](Sandbox.md)), then Phases 6 and 7. Data for the sandbox is listed in [Data-Backlog.md](Data-Backlog.md) and is worked by agents slowly, in parallel, one pack at a time.
 
 `docs/ideation.md` is a local-only snapshot of the original ideation doc, deliberately kept out of the public repo. **Where it conflicts with these context docs, these win.** It predates the India focus and most decisions below.
 
@@ -221,11 +221,36 @@ Gotchas for later phases:
 - `rustfmt.toml` sets `max_width = 120`. Run `cargo fmt --all` before `npm run check`.
 - Decisions taken without the owner, all cheap to change: the mesh overlay is always relayed; a line check of "can't find it" overrides profile data with `Unknown`; schema version is 2; `serde_norway` is the YAML parser (`serde_yaml` is unmaintained).
 
-### Phase 5: Mission UI and playback
+### Phase 5: Mission UI and playback (done 2026-11-11)
 
 Mission screen, board, findings, trace player and step log, depth switch, local progress, per [Design.md](Design.md) and [Animations.md](Animations.md).
 
 **Done =** a full mission playable at 360px and desktop, by keyboard and in reduced motion. Playwright covers win and failure.
+
+#### Phase 5 result
+
+Built: landing page with one blocked trace and the track map, the mission screen (brief, goals, controls, board, inspector, player bar, step log, result, findings, debrief), concept pages, settings (depth, motion, theme, export, import, clear) and credits. File map in [Architecture.md](Architecture.md#app-structure-as-built-phase-5), behaviour in [Design.md](Design.md) and [Animations.md](Animations.md). Bundle schema is now 3 (`tracks`, from `content/tracks.yaml`).
+
+| Check | Result |
+|---|---|
+| Browser tests | 13 pass (`npm run e2e`): 7 at 1280x800, 6 at 360x740. Failure then win in Mission 2, Mission 3 by answers, reduced-motion stepping, autoplay to the end, keyboard open and close of the inspector, no sideways scroll on five pages |
+| Step log equals the trace | Asserted step for step. The test loads the same WASM in Node to get the expected trace |
+| Unit tests | 16 app tests (8 core through WASM, 8 timeline), 36 Rust tests |
+| Playback | 60 fps at 6x CPU throttle and 58 fps at 20x, desktop and 360px at 3x pixel ratio, on Mission 4's 27 steps. Headless Chrome on an Apple M4, so script cost only |
+| Size | 350,616 B gzipped of the 512,000 B budget: WASM 193 KB, JS 149 KB, CSS 9 KB |
+| By eye | Missions 2, 3 and 4 and the landing page, in light and dark, at desktop and 375px, in the app's browser pane |
+
+Not verified: a real phone, a screen reader, visual snapshots, Mission 1 by hand (its paths are covered by the Rust tests only), and cable drag feel on a touch device (dragging is off on narrow boards).
+
+Gotchas for later phases:
+
+- **Card size is in two places**: `NODE_W` and `NODE_H` in `app/src/mission/geometry.ts` and `.device` in `app.css`. Mission layouts assume 160 by 64: wide rows are 190 apart, narrow rows 84 apart, with side branches at x 185.
+- **A travelling label does not work on a stacked board.** It covers the card above the packet. The narrow board docks the label at the top instead. The sandbox board (S4) should reuse `Board` with `mode`, not fork it.
+- The player pauses when the tab is hidden, and `requestAnimationFrame` stops in a hidden pane. A playback that "hangs" in an embedded preview is usually that.
+- `@playwright/test` uses the installed Chrome (`channel: 'chrome'`), so nothing is downloaded. CI runs `npm run e2e -w app` after `npm run check`, on the build that check made. It is not part of `npm run check`.
+- The `impeccable` skill's project setup interview was skipped on purpose. [Design.md](Design.md) is the product context, and its rules win over the skill's defaults (no web fonts, no decorative motion, system font stack for metered data).
+- React Flow is 12.x: `fitView` padding takes per-side pixel strings, which is how room is kept for the packet label.
+- Decisions taken without the owner, all cheap to change: hash routes; one `localStorage` key `homelab-sim:v1`; the debrief shown in the dock and not as a dialog; results hidden until an attempt has been run with the current setup; cable length labels left off the board (the step log carries distance and time); the line-check screen left for Phase 8.
 
 ### Phases S1 to S5: Build your own (sandbox)
 
@@ -281,7 +306,7 @@ Community ISP reports through GitHub Discussions with a structured form (ISP, ci
 
 ## Session context
 
-- **Canonical commands:** `npm run setup` (once), `npm run dev`, `npm run check` (everything CI runs), `npm run build`.
+- **Canonical commands:** `npm run setup` (once), `npm run dev`, `npm run check` (run before every commit), `npm run build`, `npm run e2e` (builds, then browser tests; needs Chrome installed).
 - **Commits:** this repo's local Git config uses the GitHub no-reply address on purpose, because the repo is public. Sign off with `git commit -s`.
 - **PATH:** Rust came from Homebrew's `rustup`, which isn't on the shell PATH. The npm scripts handle it through `scripts/env.sh`. For direct `cargo` use: `export PATH="$HOME/.cargo/bin:/opt/homebrew/opt/rustup/bin:$PATH"`.
 - **Toolchain:** Rust 1.99.1 pinned in `rust-toolchain.toml`. `wasm-bindgen` CLI pinned to the crate version in `Cargo.toml`, used directly instead of wasm-pack. TypeScript is 6.x because `typescript-eslint` does not support 7 yet.

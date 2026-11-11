@@ -10,7 +10,7 @@ use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use sim_core::bundle::{
     Bundle, Cap, ClaimValue, Control, DevicePack, Explanation, GoalCheck, IspProfile, Mission, PackKind, ProfileKind,
-    SCHEMA_VERSION,
+    SCHEMA_VERSION, Track,
 };
 use sim_core::model::Node;
 use sim_core::{Artifacts, Depth, Reason, Status};
@@ -334,6 +334,7 @@ pub fn build(root: &Path) -> Result<Bundle, Errors> {
         isps: load_isps(root, &mut errors),
         explanations: load_explanations(root, &mut errors),
         missions: BTreeMap::new(),
+        tracks: Vec::new(),
     };
     let missions = load_missions(root, &mut errors);
     let mut orders = BTreeMap::new();
@@ -344,6 +345,22 @@ pub fn build(root: &Path) -> Result<Bundle, Errors> {
         }
     }
     bundle.missions = missions;
+    let tracks_path = root.join("content/tracks.yaml");
+    if let Some(tracks) = read_yaml::<Vec<Track>>(&tracks_path, &mut errors) {
+        for track in &tracks {
+            for id in &track.missions {
+                if !bundle.missions.contains_key(id) {
+                    errors.push(format!("content/tracks.yaml: track `{}` lists unknown mission `{id}`", track.id));
+                }
+            }
+        }
+        for id in bundle.missions.keys() {
+            if !tracks.iter().any(|track| track.missions.contains(id)) {
+                errors.push(format!("content/tracks.yaml: mission `{id}` is in no track"));
+            }
+        }
+        bundle.tracks = tracks;
+    }
     if errors.is_empty() { Ok(bundle) } else { Err(errors) }
 }
 

@@ -22,3 +22,7 @@ docs/ideation.md
 .claude/
 .DS_Store
 *.log
+
+# Playwright
+app/test-results/
+app/playwright-report/

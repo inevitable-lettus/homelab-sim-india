@@ -32,3 +32,5 @@ jobs:
       - run: rustup toolchain install
       - run: npm run setup
       - run: npm run check
+      # Browser tests use the Chrome that ships on the runner and the build `check` just made.
+      - run: npm run e2e -w app

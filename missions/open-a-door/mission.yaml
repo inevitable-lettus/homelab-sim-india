@@ -23,8 +23,8 @@ challenge:
   hints:
     - The router needs to know which inside machine and port should receive the connection.
 layout:
-  wide: { phone: [0, 140], mobile: [210, 140], internet: [420, 140], whatismyip: [420, 280], isp: [630, 140], home-router: [840, 140], server: [1050, 140] }
-  narrow: { phone: [0, 0], mobile: [0, 110], internet: [0, 220], whatismyip: [175, 275], isp: [0, 330], home-router: [0, 440], server: [0, 550] }
+  wide: { phone: [0, 140], mobile: [190, 140], internet: [380, 140], whatismyip: [380, 280], isp: [570, 140], home-router: [760, 140], server: [950, 140] }
+  narrow: { phone: [0, 0], mobile: [0, 84], internet: [0, 168], whatismyip: [185, 210], isp: [0, 252], home-router: [0, 336], server: [0, 420] }
 controls:
   - kind: dial
     attempt: open-jellyfin

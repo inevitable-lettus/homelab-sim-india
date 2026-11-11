@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::model::{Id, Target, World};
 
 /// Bumped whenever the bundle format changes incompatibly.
-pub const SCHEMA_VERSION: u32 = 2;
+pub const SCHEMA_VERSION: u32 = 3;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -25,6 +25,29 @@ pub struct Bundle {
     pub explanations: BTreeMap<Id, Explanation>,
     #[serde(default)]
     pub missions: BTreeMap<Id, Mission>,
+    /// Tracks in the order they are taught.
+    #[serde(default)]
+    pub tracks: Vec<Track>,
+}
+
+/// An ordered set of missions, with the ones still to be written.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Track {
+    pub id: Id,
+    pub title: String,
+    pub summary: String,
+    pub missions: Vec<Id>,
+    /// Written up in the curriculum but not playable yet.
+    #[serde(default)]
+    pub planned: Vec<PlannedMission>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PlannedMission {
+    pub title: String,
+    pub concept: String,
 }
 
 impl Bundle {
@@ -35,6 +58,7 @@ impl Bundle {
             isps: BTreeMap::new(),
             explanations: BTreeMap::new(),
             missions: BTreeMap::new(),
+            tracks: Vec::new(),
         }
     }
 }

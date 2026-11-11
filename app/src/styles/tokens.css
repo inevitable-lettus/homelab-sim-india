@@ -1,39 +1,87 @@
-/* Placeholder tokens for the Phase 0 page. The real system arrives in Phase 5. */
+/* Design tokens. The only place colours, type sizes, spacing and radii are
+   defined. Motion values live in lib/motion.ts and are mirrored here for CSS.
+
+   Restrained palette: neutrals tinted towards the one accent, and three
+   state colours that never carry meaning without an icon and a word. */
 :root {
   color-scheme: light dark;
-  --bg: light-dark(#fafaf9, #161615);
-  --fg: light-dark(#1c1c1a, #ececea);
-  --muted: light-dark(#5f5f5a, #a3a39d);
+
+  --bg: light-dark(oklch(0.982 0.003 258), oklch(0.17 0.008 258));
+  --surface: light-dark(oklch(1 0 0), oklch(0.212 0.009 258));
+  --panel: light-dark(oklch(0.962 0.005 258), oklch(0.192 0.009 258));
+  --sunken: light-dark(oklch(0.945 0.006 258), oklch(0.15 0.008 258));
+  --line: light-dark(oklch(0.895 0.007 258), oklch(0.3 0.011 258));
+  --line-strong: light-dark(oklch(0.78 0.01 258), oklch(0.42 0.013 258));
+
+  --ink: light-dark(oklch(0.21 0.014 258), oklch(0.95 0.005 258));
+  --ink-2: light-dark(oklch(0.38 0.014 258), oklch(0.8 0.008 258));
+  --ink-3: light-dark(oklch(0.49 0.013 258), oklch(0.69 0.01 258));
+
+  --accent: light-dark(oklch(0.5 0.19 258), oklch(0.74 0.13 258));
+  --accent-strong: light-dark(oklch(0.43 0.19 258), oklch(0.8 0.11 258));
+  --accent-soft: light-dark(oklch(0.945 0.03 258), oklch(0.27 0.055 258));
+  --on-accent: light-dark(oklch(0.99 0 0), oklch(0.17 0.02 258));
+
+  --pass: light-dark(oklch(0.47 0.12 152), oklch(0.78 0.15 152));
+  --pass-soft: light-dark(oklch(0.95 0.04 152), oklch(0.26 0.05 152));
+  --fail: light-dark(oklch(0.5 0.19 27), oklch(0.74 0.15 27));
+  --fail-soft: light-dark(oklch(0.955 0.03 27), oklch(0.27 0.06 27));
+  --unknown: light-dark(oklch(0.49 0.11 70), oklch(0.82 0.13 85));
+  --unknown-soft: light-dark(oklch(0.955 0.045 85), oklch(0.28 0.05 80));
+
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+  --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.9375rem;
+  --text-lg: 1.0625rem;
+  --text-xl: 1.3125rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.375rem;
+
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+  --s8: 72px;
+
+  --r1: 4px;
+  --r2: 8px;
+  --r3: 12px;
+
+  --tap: 44px;
+
+  --z-board-ui: 5;
+  --z-sticky: 10;
+  --z-sheet: 20;
+
+  --dur-instant: 80ms;
+  --dur-fast: 160ms;
+  --dur-base: 240ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --shadow-pop: 0 1px 2px light-dark(oklch(0.21 0.014 258 / 0.08), oklch(0 0 0 / 0.4)),
+    0 8px 24px -8px light-dark(oklch(0.21 0.014 258 / 0.18), oklch(0 0 0 / 0.6));
 }
 
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--fg);
-  font-family: system-ui, sans-serif;
-  line-height: 1.5;
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
 }
 
-.page {
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-  max-width: 640px;
-  min-height: 100dvh;
-  margin: 0 auto;
-  padding: 32px 16px;
-}
-
-.page main {
-  flex: 1;
-}
-
-.page footer {
-  color: var(--muted);
-  font-size: 14px;
-}
-
-.page a {
-  color: inherit;
+/* Reduced motion is a first-class mode, set by the system or in Settings. */
+:root[data-motion='reduced'] *,
+:root[data-motion='reduced'] *::before,
+:root[data-motion='reduced'] *::after {
+  transition-duration: 0.01ms !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
 }

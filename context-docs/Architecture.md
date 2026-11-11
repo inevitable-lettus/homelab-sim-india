@@ -201,7 +201,7 @@ power: { idle_w: 8, load_w: 25 }
 
 Data lives in YAML in git, not Postgres, so anyone can contribute by PR and every change is reviewable.
 
-As built (Phase 4), `tools/data-build` reads the repo and writes one `bundle.json` (`schema_version` 2):
+As built (Phases 4 and 5), `tools/data-build` reads the repo and writes one `bundle.json` (`schema_version` 3, which added `tracks`):
 
 | Source | Becomes | Checked |
 |---|---|---|
@@ -210,6 +210,7 @@ As built (Phase 4), `tools/data-build` reads the repo and writes one `bundle.jso
 | `content/steps.yaml` | `explanations` (title and one line) | every `Reason` id has an entry |
 | `content/explanations/<id>.md` | the long sections of an explanation | only the six headings from [Design.md](Design.md) |
 | `missions/<id>/mission.yaml` | `missions` | every id it names exists; both layouts place every node; the starting world does not already pass |
+| `content/tracks.yaml` | `tracks` (mission order, and planned missions by title only) | every mission a track lists exists, and every mission is in a track |
 
 Every problem is reported with its file, and any problem fails the build. YAML is parsed with `serde_norway`. Unknown fields are rejected everywhere, so a typo is an error and not a silent default. A test (`tools/data-build/tests/missions.rs`) proves a new device needs one YAML file and no code. JSON Schema generation and dead-link checks are Phase 3 work and are not built yet.
 
@@ -235,6 +236,25 @@ Yearly cost uses a learner-editable rate, defaulted from dated state tariff pres
 ### Sandbox extension (schema v4)
 
 The "Build your own" sandbox extends this model without changing a boundary: `DevicePack` gains a `category` and capability sections, `Cap` gains a `basis`, and new pack types cover OSes, runtimes, services, tariffs, outages and templates. The world gains intents, power feeds, a home plan, learner-entered devices, a `Switch` node and a `Power` node, and the report gains an optional `build` section. Packs not used by missions ship in a separate lazily loaded `catalog.json`. The full spec is in [Sandbox.md](Sandbox.md); this file changes only when that design is built.
+
+## App structure (as built, Phase 5)
+
+```
+app/src/lib/sim.ts        The only module that calls the core. JSON in, JSON out.
+app/src/lib/types.ts      TypeScript mirror of the core's serialised types.
+app/src/lib/world.ts      Pure edits to a World: dial target, forwards, mesh join, answers.
+app/src/lib/timeline.ts   buildTimeline(trace) -> timed segments. Pure, unit-tested.
+app/src/lib/player.ts     TimelinePlayer: the playback clock. No DOM.
+app/src/lib/progress.ts   Progress and settings in localStorage, export and import.
+app/src/lib/route.ts      Hash routes, so the site works from any static sub-path.
+app/src/mission/          Board, packet overlay, player bar, step log, setup controls,
+                          result, brief, findings, debrief, inspector.
+app/src/screens/          Home (landing and track map), MissionScreen, concept, settings, credits.
+app/src/styles/           tokens.css (every colour, size and duration) and app.css.
+app/e2e/                  Playwright tests against the built site.
+```
+
+The mission screen holds one `World` draft in React state. Every edit goes through `lib/world.ts`, and the screen then calls `grade` again and renders whatever comes back. Controls are generated from the mission's `controls` list, and a dial control's choices are resolved to addresses by the core (`resolve_json`), so the UI holds no network knowledge. A learner's progress is `{ depth, motion, theme, done, drafts }` under one `localStorage` key and never leaves the device.
 
 ## Licensing and provenance
 
@@ -264,11 +284,11 @@ Targets, revised after Phase 1. "Low-end phone" has so far only been approximate
 
 | Budget | Target |
 |---|---|
-| App + core, gzipped, before any mission | under 500 KB |
+| App + core, gzipped, before any mission | under 500 KB (351 KB after Phase 5) |
 | `evaluate` on a mission-sized world | under 16 ms on a low-end Android phone |
 | Guest image first download, engine included | under 20 MB, from a saved state, shown before starting (measured 12.9 MB) |
 | Terminal time to prompt, after download | under 3 s on a low-end Android phone |
-| Packet playback | at least 30 fps on a low-end Android phone |
+| Packet playback | at least 30 fps on a low-end Android phone (60 fps at 6x CPU throttle, no phone tested) |
 
 Service-worker caching keeps repeat visits cheap on metered connections. Progress lives in browser storage with every access wrapped in try/catch, plus JSON export and import, because browser storage can be cleared.
 

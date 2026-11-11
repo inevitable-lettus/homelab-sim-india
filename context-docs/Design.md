@@ -39,6 +39,13 @@ A mission has:
 6. **Run**, which plays the connection attempt as a trace.
 7. **Result**: win, or the exact hop that failed and why.
 
+As built (Phase 5):
+
+- **Nothing is judged before a run.** Goals, findings and the result appear only after the learner has played the attempt to its end with the current setup. Changing the setup hides them again. Answers to questions are checked as soon as the trace they are about has been run.
+- **The result and the debrief sit in the dock under the player**, above the step log, not in a dialog, so the board stays in view.
+- **Tapping a card opens its inspector**: the core's facts for that box, its links, and its controls if the mission lets the learner change it. On desktop it overlays the right of the board, and the board pans so the card stays visible. On a phone it is a bottom sheet.
+- **Phone:** the switcher has Brief, Board and Findings until Phase 7 adds the terminal. The player bar stays pinned above the switcher.
+
 Learners should fail at least once in most missions, on purpose. The first obvious attempt (a port forward) failing behind CGNAT is the lesson.
 
 ## Depths

@@ -176,10 +176,26 @@ export interface Question {
   options: { value: string; label: string }[];
 }
 
+export type GoalCheck =
+  | { kind: 'delivered'; attempt: Id }
+  | { kind: 'reaches'; attempt: Id; node: Id }
+  | { kind: 'answer'; question: Id }
+  | { kind: 'rule_passes'; rule: Id };
+
 export interface Goal {
   id: Id;
   text: string;
   depth?: Depth;
+  /** Read by the UI only to know which attempt a goal waits for. The core does the checking. */
+  check: GoalCheck;
+}
+
+export interface Track {
+  id: Id;
+  title: string;
+  summary: string;
+  missions: Id[];
+  planned: { title: string; concept: string }[];
 }
 
 export interface ArtifactSpec {
@@ -228,6 +244,7 @@ export interface Bundle {
   isps: Record<Id, IspProfile>;
   explanations: Record<Id, Explanation>;
   missions: Record<Id, Mission>;
+  tracks: Track[];
 }
 
 // ---------------------------------------------------------------- results

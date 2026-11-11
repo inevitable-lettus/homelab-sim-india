@@ -1,0 +1,17 @@
+# Licensed CC BY-SA 4.0. See content/LICENSE.md.
+- id: remote-access
+  title: Remote access on an Indian broadband line
+  summary: >-
+    Reach a server at home from your phone on mobile data. Find out why the
+    usual advice fails on many lines here, and what works instead.
+  missions:
+    - which-address
+    - open-a-door
+    - the-wall
+    - dial-out
+  planned:
+    - { title: Write the tunnel, concept: A WireGuard config in a real Linux terminal }
+    - { title: Share a website, concept: "A tunnel connector for public access, and what it costs you" }
+    - { title: The IPv6 side door, concept: "Inbound IPv6, the firewall, and clients without IPv6" }
+    - { title: Rent a front door, concept: Relay through a small rented server }
+    - { title: Power cut at 2 AM, concept: "Outages, UPS or inverter, and whether access comes back" }
