@@ -12,6 +12,8 @@ Commands: `npm run dev`, `npm run check` (run before every commit).
 | [context-docs/Architecture.md](context-docs/Architecture.md) | Components, boundaries, world model, data packs, licensing |
 | [context-docs/Design.md](context-docs/Design.md) | Screens, missions, depths, verdict wording, India behaviour |
 | [context-docs/Animations.md](context-docs/Animations.md) | Motion rules, trace playback, catalogue, reduced motion |
+| [context-docs/Sandbox.md](context-docs/Sandbox.md) | "Build your own" sandbox: schema v4, intents, rules, UI, phases S1 to S5 |
+| [context-docs/Data-Backlog.md](context-docs/Data-Backlog.md) | Every data pack needed, sourcing rules for data agents, status checklist |
 | `docs/ideation.md` | Local only, not in the repo. Snapshot of the original ideation, superseded where it conflicts |
 
 ## Hard rules

@@ -8,7 +8,7 @@ Living state and build order. **Read this first in every session, and update it 
 
 **Owner's build order (2026-11-10), which overrides the phase numbering:** Part 1 is Phases 1, 4, 5, 6, 7, with only the minimum Phase 2 and 3 material the code needs (Rust schema types, short specs for Missions 1 to 5, a few archetypes, one clearly labelled teaching ISP profile with no real-ISP claims). Part 2 is Phases 2, 3 and 8. Part 3 is Phase 9. The owner approves between parts.
 
-**Next action: Phase 5 (mission UI and playback).** Then Phases 6 and 7.
+**Next action: Phase 5 (mission UI and playback).** Then Phases S1 to S5 (the "Build your own" sandbox, added 2026-11-11, spec in [Sandbox.md](Sandbox.md)), then Phases 6 and 7. Data for the sandbox is listed in [Data-Backlog.md](Data-Backlog.md) and is worked by agents slowly, in parallel, one pack at a time.
 
 `docs/ideation.md` is a local-only snapshot of the original ideation doc, deliberately kept out of the public repo. **Where it conflicts with these context docs, these win.** It predates the India focus and most decisions below.
 
@@ -37,6 +37,26 @@ Owner-confirmed on 2026-11-10:
 | Code licence | AGPL-3.0, because reused HLBuilder code requires it |
 | Principles kept from ideation | Static, no backend, no accounts, no LLM in the runtime, minimal visuals, sourced claims |
 | Revenue | Future only |
+
+Owner-confirmed on 2026-11-11:
+
+| Area | Decision |
+|---|---|
+| Sandbox | "Build your own" sandbox with parts found in India, including unconventional machines (Apple silicon laptops, old laptops, old phones). In the first release. Replaces Design.md's "sandbox not in the first release" |
+| Builder | Fable 5.2 builds Phases S1 to S5 from [Sandbox.md](Sandbox.md) |
+| Data | Agents fill [Data-Backlog.md](Data-Backlog.md) slowly, one pack per change |
+
+Taken in the sandbox spec without the owner, cheap to change (marked **(default)** in [Sandbox.md](Sandbox.md)):
+
+| Decision | Note |
+|---|---|
+| Prices are learner-typed only, stored on the device, stripped from share links by default | Keeps "rupee prices deferred" intact |
+| Learner-entered custom devices, `Provenance::Learner`, "Based on what you entered" | Lets anyone model their own old laptop |
+| No CPU performance model | No open, sourced benchmark data |
+| Slab tariffs billed on top of the household's own use, default 150 kWh/month | The India-specific power lesson |
+| Busy share 10% by default; UPS and laptop usable-battery constants as stated teaching assumptions | Shown next to every number they affect |
+| Outage scenarios assume the ISP's side stays up unless the scenario says otherwise | Stated as an assumption |
+| Sandbox slot: after Phase 5, before Phase 6, so the learner test can include it | Owner may reorder |
 
 Pushed to later by the owner:
 
@@ -207,9 +227,15 @@ Mission screen, board, findings, trace player and step log, depth switch, local 
 
 **Done =** a full mission playable at 360px and desktop, by keyboard and in reduced motion. Playwright covers win and failure.
 
+### Phases S1 to S5: Build your own (sandbox)
+
+Specified in full in [Sandbox.md §14](Sandbox.md#14-build-phases-s1-to-s5), with each phase's done criteria. In short: **S1** schema v4 and data build, **S2** world additions, intents and fit rules, **S3** power, **S4** sandbox UI, **S5** templates and first real data. S1 to S3 are core-only and can start once the uncommitted Phase 5 work is committed. S4 needs the Phase 5 board. S5 needs the P0 items of [Data-Backlog.md](Data-Backlog.md).
+
+**Done =** S5's done criteria, and this file updated with measured catalog size and gotchas.
+
 ### Phase 6: First learner test (gate)
 
-Ship Missions 1–3 without the terminal. Put them in front of about five real learners from the target groups, watch them, and check whether they can explain CGNAT afterwards.
+Ship Missions 1–3 without the terminal, and the sandbox if S1 to S5 are done. Put them in front of about five real learners from the target groups, watch them, and check whether they can explain CGNAT afterwards, and whether they can plan a build and read its report.
 
 **Done =** findings are written here and the owner decides whether to continue, change or stop before the terminal work. No beginner has tested this concept yet.
 
@@ -238,6 +264,8 @@ Community ISP reports through GitHub Discussions with a structured form (ISP, ci
 ## Open questions
 
 - [ ] Project name.
+- [ ] Do learners trust a sandbox report with many "can't tell yet" answers, or does it read as broken? (Phase 6)
+- [ ] Which ISP-supplied routers are actually issued today, per ISP and circle? (Data-Backlog D1)
 - [ ] Do target learners mostly use phones? (Phase 1 and 6)
 - [ ] Which reports count as enough to change an ISP profile's confidence? (Before community reports)
 - [ ] Are HLBuilder's maintainer and Homelab India worth contacting early? AGPL doesn't require it, but it is a courtesy and could help reach.
@@ -246,6 +274,8 @@ Community ISP reports through GitHub Discussions with a structured form (ISP, ci
 
 - **ISP claims:** current evidence is forum-level. Verify before publishing, and keep "unknown" honest.
 - **Effort:** Rust core, real terminal and a full curriculum are the heavier choices, on one person's time. Phase 6 exists to catch a wrong bet early.
+- **Sandbox data volume:** real device packs need a source for every value. Unconventional devices will show many unknowns at first. The archetypes and learner-entered devices cover the gap; the "help add this data" loop is how it improves.
+- **Sandbox claims about real products:** a wrong sourced value now tells a learner what to buy. Review every real pack like code.
 - **Direct competitor:** [HLBuilder](https://github.com/Butterski/homelab-builder) is active. Our difference is teaching, sourced verdicts, failure simulation and the India focus.
 - **Community channels:** [homelabindia/wiki](https://github.com/homelabindia/wiki) was active in November 2026, and a separate [homelab-india](https://github.com/homelab-india) organisation exists. Which one is the main community is unconfirmed.
 

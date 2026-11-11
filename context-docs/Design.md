@@ -19,10 +19,11 @@ A free, India-specific homelab learning simulator. Learners complete missions on
 | Line check | Everyone | Guided check of the learner's own connection. Feeds the sim for that session. Details below. |
 | ISP profile | Everyone | One ISP's dated claims, confidence, sources and "last checked". |
 | Concept page | Everyone | A shareable static page for one explanation. |
+| Build your own | Everyone | Sandbox: build a homelab from parts found in India, state goals, see what works, what won't and what we can't tell. Spec in [Sandbox.md](Sandbox.md). |
 | Progress and settings | Everyone | Depth mode, electricity rate, export and import progress, clear data. |
 | Credits and source | Everyone | Source link for the running version, licences, third-party list. |
 
-Sandbox free-build is not in the first release. The mission board is built so it can become one later.
+Sandbox free-build ("Build your own") was added by the owner on 2026-11-11 and reuses the mission board. Its screens, verdict wording and limits are specified in [Sandbox.md](Sandbox.md).
 
 ## Mission screen
 
@@ -65,6 +66,7 @@ Findings are ranked: errors first, then warnings, then information. Show at most
 | Fail | The specific reason and hop | "Error" alone |
 | Unknown | "We don't have data for this" | Silence, or a pass |
 | Learner's own line | "Based on your line check" | Claims about the ISP in general |
+| Learner-entered device | "Based on what you entered" | Any claim about the product |
 
 ISP statements are always dated and qualified: "Usually behind CGNAT, reported 2026", never "Jio is CGNAT".
 
@@ -113,7 +115,8 @@ Starting list. Detailed specs belong in `curriculum/`.
 
 - **ISP realities:** profiles and line check, as above.
 - **Power realities:** state tariff presets in ₹/kWh (editable), outage scenarios, UPS versus inverter behaviour, restore-on-power settings.
-- **Not at launch:** rupee hardware prices and sellers (no open data source, goes stale), Hindi or Hinglish.
+- **Hardware found in India:** the sandbox catalogue labels each real device sold new in India, commonly found used, or import only, with a source. A label, never part of a verdict.
+- **Not at launch:** shipped rupee hardware prices and sellers (no open data source, goes stale), Hindi or Hinglish. In the sandbox the learner may type their own prices, which stay on their device.
 
 ## Device and network constraints
 

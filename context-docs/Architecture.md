@@ -39,7 +39,11 @@ data/archetypes/      Generic teaching machines, one file each.
 data/devices/         Real devices, one file each. Empty at launch.
 data/isps/            Indian ISP profiles, one file each.
 data/services/        Software learners place on hosts.
-data/power/           State tariff presets and outage scenarios.
+data/os/              Operating systems and hypervisors (sandbox).
+data/runtimes/        Container runtimes (sandbox).
+data/power/           State tariffs (tariffs/) and outage scenarios (outages/).
+data/reference/       Reference tables, such as media bitrates (sandbox).
+content/sandbox/      Sandbox templates.
 content/explanations/ Teaching text, one Markdown file per concept.
 missions/             Mission definitions, one directory each.
 curriculum/           Whole-curriculum documentation in Markdown.
@@ -228,6 +232,10 @@ claims:
 
 Yearly cost uses a learner-editable rate, defaulted from dated state tariff presets (`data/power/`). Slab tariffs are simplified to one effective rate, labelled as an estimate. Outage scenarios model duration, UPS or inverter runtime from load, and whether machines and services return afterwards.
 
+### Sandbox extension (schema v4)
+
+The "Build your own" sandbox extends this model without changing a boundary: `DevicePack` gains a `category` and capability sections, `Cap` gains a `basis`, and new pack types cover OSes, runtimes, services, tariffs, outages and templates. The world gains intents, power feeds, a home plan, learner-entered devices, a `Switch` node and a `Power` node, and the report gains an optional `build` section. Packs not used by missions ship in a separate lazily loaded `catalog.json`. The full spec is in [Sandbox.md](Sandbox.md); this file changes only when that design is built.
+
 ## Licensing and provenance
 
 | Part | Licence |
@@ -266,4 +274,4 @@ Service-worker caching keeps repeat visits cheap on metered connections. Progres
 
 ## Not in this architecture
 
-Parked deliberately (see [Handoff.md](Handoff.md)): accounts, hosted SSH lab servers, a live price feed, mocked Proxmox or router admin UIs, and an in-app forum.
+Parked deliberately (see [Handoff.md](Handoff.md)): accounts, hosted SSH lab servers, a live price feed or shipped prices (the sandbox takes only learner-typed prices), mocked Proxmox or router admin UIs, and an in-app forum.
