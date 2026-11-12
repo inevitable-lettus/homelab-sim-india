@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Outage",
+  "description": "A power cut to plan for.",
+  "type": "object",
+  "properties": {
+    "duration_min": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    },
+    "id": {
+      "type": "string"
+    },
+    "isp_side": {
+      "description": "Whether the provider's side stays up. `up` is an assumption, and says so.",
+      "$ref": "#/$defs/IspSide",
+      "default": "up"
+    },
+    "kind": {
+      "$ref": "#/$defs/ProfileKind"
+    },
+    "label": {
+      "type": "string"
+    },
+    "per_day": {
+      "type": "integer",
+      "format": "uint32",
+      "default": 1,
+      "minimum": 0
+    },
+    "retrieved_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "source": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "label",
+    "kind",
+    "duration_min"
+  ],
+  "$defs": {
+    "IspSide": {
+      "type": "string",
+      "enum": [
+        "up",
+        "down",
+        "unknown"
+      ]
+    },
+    "ProfileKind": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "real"
+          ]
+        },
+        {
+          "description": "Invented for teaching. Makes no claim about any real provider.",
+          "type": "string",
+          "const": "teaching"
+        }
+      ]
+    }
+  }
+}

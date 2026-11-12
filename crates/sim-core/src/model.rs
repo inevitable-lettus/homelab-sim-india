@@ -43,6 +43,18 @@ pub struct World {
     pub line_checks: Vec<LineCheck>,
 }
 
+/// A world is described by its own types. In a pack schema it is an object.
+#[cfg(feature = "schema")]
+impl schemars::JsonSchema for World {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "World".into()
+    }
+
+    fn json_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        schemars::json_schema!({ "type": "object" })
+    }
+}
+
 impl World {
     pub fn node(&self, id: &str) -> Option<&Node> {
         self.nodes.iter().find(|node| node.id() == id)
@@ -150,6 +162,7 @@ pub struct Host {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum Proto {
     Tcp,

@@ -9,10 +9,11 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use sim_core::bundle::{
-    Bundle, Cap, ClaimValue, Control, DevicePack, Explanation, GoalCheck, IspProfile, Mission, PackKind, ProfileKind,
-    SCHEMA_VERSION, Track,
+    Bundle, ClaimValue, Control, DevicePack, Explanation, GoalCheck, IspProfile, Layout, MediaFormat, Mission, OsPack,
+    Outage, PackKind, ProfileKind, RuntimePack, SCHEMA_VERSION, ServicePack, Tariff, Template, Track,
 };
-use sim_core::model::Node;
+use sim_core::model::{Node, World};
+use sim_core::packs::{Audit, Leaf, LeafState};
 use sim_core::{Artifacts, Depth, Reason, Status};
 
 pub type Errors = Vec<String>;
@@ -33,6 +34,9 @@ fn stem(path: &Path) -> String {
     path.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default()
 }
 
+/// Query-string parameters that track the reader. Sources may not carry them.
+const TRACKING: [&str; 3] = ["utm_", "tag=", "affid"];
+
 fn read_yaml<T: DeserializeOwned>(path: &Path, errors: &mut Errors) -> Option<T> {
     let text = match fs::read_to_string(path) {
         Ok(text) => text,
@@ -41,10 +45,23 @@ fn read_yaml<T: DeserializeOwned>(path: &Path, errors: &mut Errors) -> Option<T>
             return None;
         }
     };
-    match serde_norway::from_str(&text) {
+    for (n, line) in text.lines().enumerate() {
+        let query = line.split_once("://").and_then(|(_, rest)| rest.split_once('?')).map(|(_, query)| query);
+        if let Some(marker) = query.and_then(|q| TRACKING.iter().find(|marker| q.contains(**marker))) {
+            errors.push(format!(
+                "{}: line {}: a source link carries the tracking parameter `{marker}`",
+                path.display(),
+                n + 1
+            ));
+        }
+    }
+    match serde_path_to_error::deserialize(serde_norway::Deserializer::from_str(&text)) {
         Ok(value) => Some(value),
         Err(e) => {
-            errors.push(format!("{}: {e}", path.display()));
+            // Name the field, so a contributor knows where to look.
+            let field = e.path().to_string();
+            let field = if field == "." { String::new() } else { format!("`{field}`: ") };
+            errors.push(format!("{}: {field}{}", path.display(), e.inner()));
             None
         }
     }
@@ -53,6 +70,19 @@ fn read_yaml<T: DeserializeOwned>(path: &Path, errors: &mut Errors) -> Option<T>
 fn check_id(path: &Path, expected: &str, id: &str, errors: &mut Errors) {
     if id != expected {
         errors.push(format!("{}: id `{id}` must match the file or folder name `{expected}`", path.display()));
+    }
+}
+
+/// Values with no source, in a pack that claims to describe something real.
+fn check_sourced(path: &Path, pack: &impl Audit, errors: &mut Errors) {
+    let mut leaves: Vec<Leaf> = Vec::new();
+    pack.audit("", &mut leaves);
+    for leaf in leaves.iter().filter(|leaf| leaf.state == LeafState::Bare) {
+        errors.push(format!(
+            "{}: `{}` needs `{{ value, source, retrieved_at }}` in a real pack, or `unknown`",
+            path.display(),
+            leaf.path
+        ));
     }
 }
 
@@ -68,24 +98,16 @@ fn load_devices(root: &Path, errors: &mut Errors) -> BTreeMap<String, DevicePack
                 errors
                     .push(format!("{}: files in `{folder}` must have `kind: {kind:?}`", path.display()).to_lowercase());
             }
+            let allowed = pack.category.allowed_sections();
+            for section in pack.sections().into_iter().filter(|section| !allowed.contains(section)) {
+                errors.push(
+                    format!("{}: `{section}` is not a section of category `{:?}`", path.display(), pack.category)
+                        .to_lowercase(),
+                );
+            }
             if pack.kind == PackKind::Device {
                 // A real product may not carry a value without saying where it came from.
-                let caps = &pack.capabilities;
-                let mut unsourced = vec![
-                    ("arch", caps.arch.is_unsourced_value()),
-                    ("ram_gb", caps.ram_gb.is_unsourced_value()),
-                    ("virtualization", caps.virtualization.is_unsourced_value()),
-                    ("igpu_transcode", caps.igpu_transcode.is_unsourced_value()),
-                    ("power.idle_w", pack.power.idle_w.is_unsourced_value()),
-                    ("power.load_w", pack.power.load_w.is_unsourced_value()),
-                ];
-                unsourced.extend(caps.nic.iter().map(|nic| ("nic.speed_mbps", nic.speed_mbps.is_unsourced_value())));
-                for (name, _) in unsourced.into_iter().filter(|(_, bad)| *bad) {
-                    errors.push(format!(
-                        "{}: `{name}` needs `{{ value, source, retrieved_at }}` in a real device, or `unknown`",
-                        path.display()
-                    ));
-                }
+                check_sourced(&path, &pack, errors);
             }
             if devices.insert(pack.id.clone(), pack).is_some() {
                 errors.push(format!("{}: duplicate device id", path.display()));
@@ -93,6 +115,126 @@ fn load_devices(root: &Path, errors: &mut Errors) -> BTreeMap<String, DevicePack
         }
     }
     devices
+}
+
+/// One YAML file per pack, named after its id.
+fn load_packs<T: DeserializeOwned>(
+    root: &Path,
+    folder: &str,
+    errors: &mut Errors,
+    mut check: impl FnMut(&Path, &T, &mut Errors) -> String,
+) -> BTreeMap<String, T> {
+    let mut packs = BTreeMap::new();
+    for path in files(&root.join(folder), "yaml") {
+        let Some(pack) = read_yaml::<T>(&path, errors) else {
+            continue;
+        };
+        let id = check(&path, &pack, errors);
+        check_id(&path, &stem(&path), &id, errors);
+        packs.insert(id, pack);
+    }
+    packs
+}
+
+fn needs_sources(path: &Path, teaching: bool, sources: usize, pack: &impl Audit, errors: &mut Errors) {
+    if teaching {
+        return;
+    }
+    check_sourced(path, pack, errors);
+    if sources == 0 {
+        errors.push(format!("{}: a real pack needs at least one entry in `sources`", path.display()));
+    }
+}
+
+fn load_os(root: &Path, errors: &mut Errors) -> BTreeMap<String, OsPack> {
+    load_packs(root, "data/os", errors, |path, pack: &OsPack, errors| {
+        needs_sources(path, pack.teaching, pack.sources.len(), pack, errors);
+        pack.id.clone()
+    })
+}
+
+fn load_runtimes(root: &Path, errors: &mut Errors) -> BTreeMap<String, RuntimePack> {
+    load_packs(root, "data/runtimes", errors, |path, pack: &RuntimePack, errors| {
+        needs_sources(path, pack.teaching, pack.sources.len(), pack, errors);
+        pack.id.clone()
+    })
+}
+
+fn load_services(root: &Path, errors: &mut Errors) -> BTreeMap<String, ServicePack> {
+    load_packs(root, "data/services", errors, |path, pack: &ServicePack, errors| {
+        needs_sources(path, pack.teaching, pack.sources.len(), pack, errors);
+        pack.id.clone()
+    })
+}
+
+fn load_tariffs(root: &Path, errors: &mut Errors) -> BTreeMap<String, Tariff> {
+    load_packs(root, "data/power/tariffs", errors, |path, tariff: &Tariff, errors| {
+        let dated = usize::from(!tariff.source.is_empty() && !tariff.retrieved_at.is_empty());
+        needs_sources(path, tariff.teaching, dated, tariff, errors);
+        // Slabs climb, and exactly the last one is open-ended.
+        let open = tariff.slabs.iter().filter(|slab| slab.upto_kwh.is_none()).count();
+        let last_open = tariff.slabs.last().is_some_and(|slab| slab.upto_kwh.is_none());
+        let limits: Vec<u32> = tariff.slabs.iter().filter_map(|slab| slab.upto_kwh).collect();
+        if open != 1 || !last_open || limits.windows(2).any(|pair| pair[0] >= pair[1]) {
+            errors.push(format!(
+                "{}: `slabs` must rise by `upto_kwh` and end with exactly one slab that has no `upto_kwh`",
+                path.display()
+            ));
+        }
+        tariff.id.clone()
+    })
+}
+
+fn load_outages(root: &Path, errors: &mut Errors) -> BTreeMap<String, Outage> {
+    load_packs(root, "data/power/outages", errors, |path, outage: &Outage, errors| {
+        if outage.kind == ProfileKind::Real && (outage.source.is_none() || outage.retrieved_at.is_none()) {
+            errors.push(format!("{}: a real outage scenario needs `source` and `retrieved_at`", path.display()));
+        }
+        if outage.duration_min == 0 || outage.per_day == 0 {
+            errors.push(format!("{}: `duration_min` and `per_day` must be at least 1", path.display()));
+        }
+        outage.id.clone()
+    })
+}
+
+fn load_media(root: &Path, errors: &mut Errors) -> BTreeMap<String, MediaFormat> {
+    let path = root.join("data/reference/media.yaml");
+    if !path.exists() {
+        return BTreeMap::new();
+    }
+    let formats = read_yaml::<BTreeMap<String, MediaFormat>>(&path, errors).unwrap_or_default();
+    for (id, format) in &formats {
+        if !format.teaching && format.kbps.is_unsourced_value() {
+            errors.push(format!("{}: `{id}.kbps` needs a source, or `unknown`", path.display()));
+        }
+    }
+    formats
+}
+
+fn load_templates(root: &Path, errors: &mut Errors) -> BTreeMap<String, Template> {
+    load_packs(root, "content/sandbox/templates", errors, |_, template: &Template, _| template.id.clone())
+}
+
+/// Ids one pack uses to name another must exist.
+fn check_references(bundle: &Bundle, errors: &mut Errors) {
+    for (id, device) in &bundle.devices {
+        for os in device.os_support.keys().filter(|os| !bundle.os.contains_key(*os)) {
+            errors.push(format!("device `{id}`: `os_support` names unknown OS `{os}`"));
+        }
+        let apps = device.client.iter().flat_map(|client| &client.apps);
+        for app in apps.filter(|app| !bundle.services.contains_key(*app)) {
+            errors.push(format!("device `{id}`: `client.apps` names unknown service `{app}`"));
+        }
+        let isp = device.router.as_ref().and_then(|router| router.supplied_by.as_ref());
+        if let Some(isp) = isp.filter(|isp| !bundle.isps.contains_key(*isp)) {
+            errors.push(format!("device `{id}`: `router.supplied_by` names unknown ISP profile `{isp}`"));
+        }
+    }
+    for (id, os) in &bundle.os {
+        for runtime in os.provides.native_runtimes.iter().filter(|r| !bundle.runtimes.contains_key(*r)) {
+            errors.push(format!("os `{id}`: `provides.native_runtimes` names unknown runtime `{runtime}`"));
+        }
+    }
 }
 
 fn load_isps(root: &Path, errors: &mut Errors) -> BTreeMap<String, IspProfile> {
@@ -225,12 +367,10 @@ fn load_missions(root: &Path, errors: &mut Errors) -> BTreeMap<String, Mission> 
     missions
 }
 
-fn check_mission(path: &str, mission: &Mission, bundle: &Bundle, errors: &mut Errors) {
-    let world = &mission.world;
+/// Checks that hold for any authored world: a mission's or a template's.
+fn check_world(path: &str, world: &World, layout: &Layout, bundle: &Bundle, errors: &mut Errors) {
     let mut fail = |message: String| errors.push(format!("{path}: {message}"));
     let has_node = |id: &str| world.node(id).is_some();
-    let has_attempt = |id: &str| world.attempts.iter().any(|a| a.id == id);
-    let has_question = |id: &str| mission.questions.iter().any(|q| q.id == id);
 
     let mut ids: Vec<&str> = world.nodes.iter().map(Node::id).collect();
     ids.sort_unstable();
@@ -245,7 +385,7 @@ fn check_mission(path: &str, mission: &Mission, bundle: &Bundle, errors: &mut Er
         }
     }
     for node in &world.nodes {
-        for (name, layout) in [("wide", &mission.layout.wide), ("narrow", &mission.layout.narrow)] {
+        for (name, layout) in [("wide", &layout.wide), ("narrow", &layout.narrow)] {
             if !layout.contains_key(node.id()) {
                 fail(format!("layout.{name} has no position for `{}`", node.id()));
             }
@@ -270,7 +410,14 @@ fn check_mission(path: &str, mission: &Mission, bundle: &Bundle, errors: &mut Er
                     fail(format!("`{}` uses unknown ISP profile `{profile}`", isp.id));
                 }
             }
-            Node::Router(_) | Node::Internet(_) => {}
+            Node::Router(router) => {
+                if let Some(device) = &router.device
+                    && !bundle.devices.contains_key(device)
+                {
+                    fail(format!("`{}` uses unknown device `{device}`", router.id));
+                }
+            }
+            Node::Internet(_) => {}
         }
     }
     for attempt in &world.attempts {
@@ -283,6 +430,16 @@ fn check_mission(path: &str, mission: &Mission, bundle: &Bundle, errors: &mut Er
             fail(format!("overlay `{}` names unknown relay `{}`", overlay.id, overlay.relay));
         }
     }
+}
+
+fn check_mission(path: &str, mission: &Mission, bundle: &Bundle, errors: &mut Errors) {
+    let world = &mission.world;
+    check_world(path, world, &mission.layout, bundle, errors);
+    let mut fail = |message: String| errors.push(format!("{path}: {message}"));
+    let has_node = |id: &str| world.node(id).is_some();
+    let has_attempt = |id: &str| world.attempts.iter().any(|a| a.id == id);
+    let has_question = |id: &str| mission.questions.iter().any(|q| q.id == id);
+
     for control in &mission.controls {
         let ok = match control {
             Control::Dial { attempt, .. } => has_attempt(attempt),
@@ -331,11 +488,29 @@ pub fn build(root: &Path) -> Result<Bundle, Errors> {
     let mut bundle = Bundle {
         schema_version: SCHEMA_VERSION,
         devices: load_devices(root, &mut errors),
+        os: load_os(root, &mut errors),
+        runtimes: load_runtimes(root, &mut errors),
+        services: load_services(root, &mut errors),
+        tariffs: load_tariffs(root, &mut errors),
+        outages: load_outages(root, &mut errors),
+        media: load_media(root, &mut errors),
+        templates: BTreeMap::new(),
         isps: load_isps(root, &mut errors),
         explanations: load_explanations(root, &mut errors),
         missions: BTreeMap::new(),
         tracks: Vec::new(),
     };
+    check_references(&bundle, &mut errors);
+    let templates = load_templates(root, &mut errors);
+    for (id, template) in &templates {
+        let path = format!("content/sandbox/templates/{id}.yaml");
+        check_world(&path, &template.world, &template.layout, &bundle, &mut errors);
+        let report = sim_core::evaluate(&template.world, &bundle);
+        if report.findings.iter().any(|f| f.rule_id == Reason::EvaluationDidNotSettle) {
+            errors.push(format!("{path}: the world does not settle"));
+        }
+    }
+    bundle.templates = templates;
     let missions = load_missions(root, &mut errors);
     let mut orders = BTreeMap::new();
     for (id, mission) in &missions {
@@ -364,17 +539,67 @@ pub fn build(root: &Path) -> Result<Bundle, Errors> {
     if errors.is_empty() { Ok(bundle) } else { Err(errors) }
 }
 
-pub fn write(bundle: &Bundle, output: &Path) -> Result<String, Errors> {
+/// Split what was built into the bundle missions need and the sandbox
+/// catalog, which is fetched only when the sandbox opens.
+pub fn split(full: Bundle) -> (Bundle, Bundle) {
+    let mut devices: Vec<&str> = Vec::new();
+    let mut isps: Vec<&str> = Vec::new();
+    for mission in full.missions.values() {
+        for node in &mission.world.nodes {
+            match node {
+                Node::Host(host) => devices.extend(host.device.as_deref()),
+                Node::Router(router) => devices.extend(router.device.as_deref()),
+                Node::Isp(isp) => isps.extend(isp.profile.as_deref()),
+                Node::Internet(_) => {}
+            }
+        }
+    }
+    let (mission_devices, catalog_devices) =
+        full.devices.clone().into_iter().partition(|(id, _)| devices.contains(&id.as_str()));
+    let (mission_isps, catalog_isps) = full.isps.clone().into_iter().partition(|(id, _)| isps.contains(&id.as_str()));
+    let catalog = Bundle {
+        devices: catalog_devices,
+        isps: catalog_isps,
+        os: full.os,
+        runtimes: full.runtimes,
+        services: full.services,
+        tariffs: full.tariffs,
+        outages: full.outages,
+        media: full.media,
+        templates: full.templates,
+        ..Bundle::empty()
+    };
+    let missions = Bundle {
+        devices: mission_devices,
+        isps: mission_isps,
+        explanations: full.explanations,
+        missions: full.missions,
+        tracks: full.tracks,
+        ..Bundle::empty()
+    };
+    (missions, catalog)
+}
+
+fn write_json(json: &str, output: &Path) -> Result<(), Errors> {
     let io = |e: std::io::Error| vec![format!("{}: {e}", output.display())];
     if let Some(parent) = output.parent() {
         fs::create_dir_all(parent).map_err(io)?;
     }
+    fs::write(output, json).map_err(io)
+}
+
+pub fn write(bundle: &Bundle, output: &Path) -> Result<String, Errors> {
     let mut json = serde_json::to_string(bundle).map_err(|e| vec![e.to_string()])?;
     json.push('\n');
-    fs::write(output, &json).map_err(io)?;
+    write_json(&json, output)?;
     Ok(format!(
-        "{} devices, {} ISP profiles, {} explanations, {} missions, {} bytes",
+        "{} devices, {} OS, {} runtimes, {} services, {} tariffs, {} templates, {} ISP profiles, {} explanations, {} missions, {} bytes",
         bundle.devices.len(),
+        bundle.os.len(),
+        bundle.runtimes.len(),
+        bundle.services.len(),
+        bundle.tariffs.len(),
+        bundle.templates.len(),
         bundle.isps.len(),
         bundle.explanations.len(),
         bundle.missions.len(),
@@ -382,5 +607,30 @@ pub fn write(bundle: &Bundle, output: &Path) -> Result<String, Errors> {
     ))
 }
 
-// Unused import guard: `Cap` is part of the schema this crate validates.
-const _: fn(&Cap<u32>) -> bool = Cap::is_unsourced_value;
+/// JSON Schema for every kind of pack file, so editors can check a file as
+/// it is written. File name first, then the schema as pretty JSON.
+pub fn schemas() -> Vec<(&'static str, String)> {
+    fn pretty<T: schemars::JsonSchema>() -> String {
+        let mut json = serde_json::to_string_pretty(&schemars::schema_for!(T)).expect("a schema is plain JSON");
+        json.push('\n');
+        json
+    }
+    vec![
+        ("device.schema.json", pretty::<DevicePack>()),
+        ("os.schema.json", pretty::<OsPack>()),
+        ("runtime.schema.json", pretty::<RuntimePack>()),
+        ("service.schema.json", pretty::<ServicePack>()),
+        ("tariff.schema.json", pretty::<Tariff>()),
+        ("outage.schema.json", pretty::<Outage>()),
+        ("media.schema.json", pretty::<BTreeMap<String, MediaFormat>>()),
+        ("template.schema.json", pretty::<Template>()),
+    ]
+}
+
+pub fn write_schemas(dir: &Path) -> Result<String, Errors> {
+    let all = schemas();
+    for (name, json) in &all {
+        write_json(json, &dir.join(name))?;
+    }
+    Ok(format!("{} schemas", all.len()))
+}

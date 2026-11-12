@@ -1,0 +1,322 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OsPack",
+  "type": "object",
+  "properties": {
+    "arches": {
+      "description": "What it can boot on, when the device says nothing.",
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Arch"
+      }
+    },
+    "base_ram_mb": {
+      "description": "Idle footprint used in the RAM budget.",
+      "$ref": "#/$defs/Cap2",
+      "default": "unknown"
+    },
+    "family": {
+      "$ref": "#/$defs/OsFamily"
+    },
+    "firmware": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Firmware"
+      }
+    },
+    "id": {
+      "type": "string"
+    },
+    "kind": {
+      "$ref": "#/$defs/OsKind"
+    },
+    "label": {
+      "type": "string"
+    },
+    "listed_devices_only": {
+      "description": "A device must name this OS in `os_support`.",
+      "type": "boolean",
+      "default": false
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "provides": {
+      "$ref": "#/$defs/OsProvides",
+      "default": {
+        "lxc": "unknown",
+        "native_runtimes": [],
+        "vm_accelerated_arches": [],
+        "vm_emulated_arches": [],
+        "vms": "unknown"
+      }
+    },
+    "requires": {
+      "$ref": "#/$defs/OsRequires",
+      "default": {
+        "ram_min_mb": "unknown",
+        "storage_min_gb": "unknown",
+        "virtualization": "unknown",
+        "wired_nic": "unknown"
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Source"
+      }
+    },
+    "teaching": {
+      "description": "A generic teaching system. Says nothing about any real product.",
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "label",
+    "kind",
+    "family"
+  ],
+  "$defs": {
+    "Arch": {
+      "type": "string",
+      "enum": [
+        "x86_64",
+        "aarch64",
+        "armv7",
+        "armv6",
+        "riscv64",
+        "ppc64le",
+        "s390x"
+      ]
+    },
+    "Basis": {
+      "description": "How good the source behind a value is.",
+      "oneOf": [
+        {
+          "description": "The maker's spec page, datasheet, manual or official documentation.",
+          "type": "string",
+          "const": "official"
+        },
+        {
+          "description": "An independent measurement published by a named reviewer.",
+          "type": "string",
+          "const": "review"
+        },
+        {
+          "description": "A forum, wiki, issue tracker or user report.",
+          "type": "string",
+          "const": "community"
+        }
+      ]
+    },
+    "Cap": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "type": "boolean"
+        }
+      ]
+    },
+    "Cap2": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      ]
+    },
+    "Firmware": {
+      "type": "string",
+      "enum": [
+        "uefi",
+        "bios",
+        "uefi_and_bios",
+        "apple_silicon",
+        "uboot",
+        "android_bootloader"
+      ]
+    },
+    "OsFamily": {
+      "type": "string",
+      "enum": [
+        "linux",
+        "macos",
+        "windows",
+        "android",
+        "bsd"
+      ]
+    },
+    "OsKind": {
+      "type": "string",
+      "enum": [
+        "os",
+        "hypervisor",
+        "nas_os",
+        "appliance"
+      ]
+    },
+    "OsProvides": {
+      "type": "object",
+      "properties": {
+        "lxc": {
+          "$ref": "#/$defs/Cap",
+          "default": "unknown"
+        },
+        "native_runtimes": {
+          "description": "Runtime pack ids available without a VM.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "vm_accelerated_arches": {
+          "description": "Guests of other architectures are emulated, or do not run.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Arch"
+          }
+        },
+        "vm_emulated_arches": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Arch"
+          }
+        },
+        "vms": {
+          "$ref": "#/$defs/Cap",
+          "default": "unknown"
+        }
+      },
+      "additionalProperties": false
+    },
+    "OsRequires": {
+      "type": "object",
+      "properties": {
+        "ram_min_mb": {
+          "$ref": "#/$defs/Cap2",
+          "default": "unknown"
+        },
+        "storage_min_gb": {
+          "$ref": "#/$defs/Cap2",
+          "default": "unknown"
+        },
+        "virtualization": {
+          "$ref": "#/$defs/Cap",
+          "default": "unknown"
+        },
+        "wired_nic": {
+          "$ref": "#/$defs/Cap",
+          "default": "unknown"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Source": {
+      "type": "object",
+      "properties": {
+        "basis": {
+          "$ref": "#/$defs/Basis"
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "retrieved_at": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "retrieved_at"
+      ]
+    },
+    "UnknownMark": {
+      "type": "string",
+      "enum": [
+        "unknown"
+      ]
+    }
+  }
+}

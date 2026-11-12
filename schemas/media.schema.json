@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Map_of_MediaFormat",
+  "type": "object",
+  "additionalProperties": {
+    "$ref": "#/$defs/MediaFormat"
+  },
+  "$defs": {
+    "Basis": {
+      "description": "How good the source behind a value is.",
+      "oneOf": [
+        {
+          "description": "The maker's spec page, datasheet, manual or official documentation.",
+          "type": "string",
+          "const": "official"
+        },
+        {
+          "description": "An independent measurement published by a named reviewer.",
+          "type": "string",
+          "const": "review"
+        },
+        {
+          "description": "A forum, wiki, issue tracker or user report.",
+          "type": "string",
+          "const": "community"
+        }
+      ]
+    },
+    "Cap": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      ]
+    },
+    "Codec": {
+      "type": "string",
+      "enum": [
+        "h264",
+        "hevc_8",
+        "hevc_10",
+        "av1",
+        "vp9"
+      ]
+    },
+    "MediaFormat": {
+      "description": "A typical bitrate for one media format. Typical, not exact.",
+      "type": "object",
+      "properties": {
+        "codec": {
+          "$ref": "#/$defs/Codec"
+        },
+        "kbps": {
+          "$ref": "#/$defs/Cap",
+          "default": "unknown"
+        },
+        "label": {
+          "type": "string"
+        },
+        "teaching": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "codec"
+      ]
+    },
+    "UnknownMark": {
+      "type": "string",
+      "enum": [
+        "unknown"
+      ]
+    }
+  }
+}

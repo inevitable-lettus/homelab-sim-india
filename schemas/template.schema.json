@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Template",
+  "description": "A starting build for the sandbox.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "layout": {
+      "$ref": "#/$defs/Layout"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "world": {
+      "$ref": "#/$defs/World"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "title",
+    "summary",
+    "world",
+    "layout"
+  ],
+  "$defs": {
+    "Layout": {
+      "type": "object",
+      "properties": {
+        "narrow": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "maxItems": 2,
+            "minItems": 2
+          }
+        },
+        "wide": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "maxItems": 2,
+            "minItems": 2
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "wide",
+        "narrow"
+      ]
+    },
+    "World": {
+      "type": "object"
+    }
+  }
+}

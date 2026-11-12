@@ -1,0 +1,381 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RuntimePack",
+  "type": "object",
+  "properties": {
+    "cost": {
+      "$ref": "#/$defs/Cap5",
+      "default": "unknown"
+    },
+    "device_passthrough": {
+      "description": "GPU APIs a container can use.",
+      "$ref": "#/$defs/Cap4",
+      "default": "unknown"
+    },
+    "host_network": {
+      "$ref": "#/$defs/Cap3",
+      "default": "unknown"
+    },
+    "id": {
+      "type": "string"
+    },
+    "label": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "os_families": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/OsFamily"
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Source"
+      }
+    },
+    "teaching": {
+      "type": "boolean"
+    },
+    "via_vm": {
+      "description": "Runs containers inside a hidden Linux VM.",
+      "$ref": "#/$defs/Cap",
+      "default": "unknown"
+    },
+    "vm_overhead_mb": {
+      "description": "RAM that VM takes before any container.",
+      "$ref": "#/$defs/Cap2",
+      "default": "unknown"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "label",
+    "os_families"
+  ],
+  "$defs": {
+    "AccelApi": {
+      "type": "string",
+      "enum": [
+        "vaapi",
+        "qsv",
+        "nvenc",
+        "amf",
+        "videotoolbox",
+        "v4l2m2m",
+        "rkmpp"
+      ]
+    },
+    "Basis": {
+      "description": "How good the source behind a value is.",
+      "oneOf": [
+        {
+          "description": "The maker's spec page, datasheet, manual or official documentation.",
+          "type": "string",
+          "const": "official"
+        },
+        {
+          "description": "An independent measurement published by a named reviewer.",
+          "type": "string",
+          "const": "review"
+        },
+        {
+          "description": "A forum, wiki, issue tracker or user report.",
+          "type": "string",
+          "const": "community"
+        }
+      ]
+    },
+    "Cap": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "type": "boolean"
+        }
+      ]
+    },
+    "Cap2": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      ]
+    },
+    "Cap3": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/HostNetworkValue"
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "$ref": "#/$defs/HostNetworkValue"
+        }
+      ]
+    },
+    "Cap4": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/AccelApi"
+              }
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AccelApi"
+          }
+        }
+      ]
+    },
+    "Cap5": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/Cost"
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "$ref": "#/$defs/Cost"
+        }
+      ]
+    },
+    "Cost": {
+      "type": "string",
+      "enum": [
+        "free",
+        "free_personal",
+        "paid"
+      ]
+    },
+    "HostNetwork": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "no"
+          ]
+        },
+        {
+          "description": "`network_mode: host` reaches the real LAN.",
+          "type": "string",
+          "const": "yes"
+        },
+        {
+          "description": "It reaches the hidden VM or localhost only, not the LAN.",
+          "type": "string",
+          "const": "limited"
+        }
+      ]
+    },
+    "HostNetworkValue": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/HostNetwork"
+        },
+        {
+          "type": "boolean"
+        }
+      ]
+    },
+    "OsFamily": {
+      "type": "string",
+      "enum": [
+        "linux",
+        "macos",
+        "windows",
+        "android",
+        "bsd"
+      ]
+    },
+    "Source": {
+      "type": "object",
+      "properties": {
+        "basis": {
+          "$ref": "#/$defs/Basis"
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "retrieved_at": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "retrieved_at"
+      ]
+    },
+    "UnknownMark": {
+      "type": "string",
+      "enum": [
+        "unknown"
+      ]
+    }
+  }
+}

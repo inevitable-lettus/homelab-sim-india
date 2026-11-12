@@ -1,0 +1,2024 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DevicePack",
+  "type": "object",
+  "properties": {
+    "adapter": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AdapterCaps"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "aka": {
+      "description": "Search aliases and model numbers.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "battery": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/BatteryCaps"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "category": {
+      "$ref": "#/$defs/Category"
+    },
+    "client": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ClientCaps"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "compute": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Compute"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "drive": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DriveCaps"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "form": {
+      "$ref": "#/$defs/Cap2",
+      "default": "unknown"
+    },
+    "id": {
+      "type": "string"
+    },
+    "india": {
+      "description": "A label for the parts list. Never part of a verdict.",
+      "$ref": "#/$defs/Cap3",
+      "default": "unknown"
+    },
+    "kind": {
+      "$ref": "#/$defs/PackKind"
+    },
+    "label": {
+      "type": "string"
+    },
+    "network": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/NetCaps"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "notes": {
+      "description": "Shown in the inspector. No rule reads them.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "os_support": {
+      "description": "Keyed by OS pack id.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/Cap24"
+      }
+    },
+    "ports": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Ports"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "power": {
+      "$ref": "#/$defs/Power",
+      "default": {
+        "idle_w": "unknown",
+        "input": "unknown",
+        "load_w": "unknown"
+      }
+    },
+    "released": {
+      "description": "Year of release.",
+      "$ref": "#/$defs/Cap",
+      "default": "unknown"
+    },
+    "router": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RouterCaps"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "storage": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/StorageCaps"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "ups": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/UpsCaps"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "kind",
+    "category",
+    "label"
+  ],
+  "$defs": {
+    "AccelApi": {
+      "type": "string",
+      "enum": [
+        "vaapi",
+        "qsv",
+        "nvenc",
+        "amf",
+        "videotoolbox",
+        "v4l2m2m",
+        "rkmpp"
+      ]
+    },
+    "AdapterCaps": {
+      "type": "object",
+      "properties": {
+        "host_side": {
+          "description": "What it plugs into.",
+          "$ref": "#/$defs/Cap23",
+          "default": "unknown"
+        },
+        "needs_power": {
+          "description": "An external power brick is required.",
+          "$ref": "#/$defs/Cap6",
+          "default": "unknown"
+        },
+        "provides": {
+          "$ref": "#/$defs/AdapterProvides",
+          "default": {
+            "bays": "unknown",
+            "nic": "unknown",
+            "usb": "unknown"
+          }
+        },
+        "uas": {
+          "$ref": "#/$defs/Cap6",
+          "default": "unknown"
+        }
+      },
+      "additionalProperties": false
+    },
+    "AdapterProvides": {
+      "type": "object",
+      "properties": {
+        "bays": {
+          "$ref": "#/$defs/Cap13",
+          "default": "unknown"
+        },
+        "nic": {
+          "$ref": "#/$defs/Cap10",
+          "default": "unknown"
+        },
+        "usb": {
+          "$ref": "#/$defs/Cap12",
+          "default": "unknown"
+        }
+      },
+      "additionalProperties": false
+    },
+    "AdminAccess": {
+      "type": "string",
+      "enum": [
+        "full",
+        "limited",
+        "isp_only"
+      ]
+    },
+    "Arch": {
+      "type": "string",
+      "enum": [
+        "x86_64",
+        "aarch64",
+        "armv7",
+        "armv6",
+        "riscv64",
+        "ppc64le",
+        "s390x"
+      ]
+    },
+    "Availability": {
+      "type": "string",
+      "enum": [
+        "sold_new",
+        "used_common",
+        "import_only",
+        "discontinued"
+      ]
+    },
+    "Basis": {
+      "description": "How good the source behind a value is.",
+      "oneOf": [
+        {
+          "description": "The maker's spec page, datasheet, manual or official documentation.",
+          "type": "string",
+          "const": "official"
+        },
+        {
+          "description": "An independent measurement published by a named reviewer.",
+          "type": "string",
+          "const": "review"
+        },
+        {
+          "description": "A forum, wiki, issue tracker or user report.",
+          "type": "string",
+          "const": "community"
+        }
+      ]
+    },
+    "BatteryCaps": {
+      "type": "object",
+      "properties": {
+        "firmware_charge_limit": {
+          "description": "A charge limit set in firmware, independent of the OS.",
+          "$ref": "#/$defs/Cap6",
+          "default": "unknown"
+        },
+        "wh": {
+          "$ref": "#/$defs/Cap5",
+          "default": "unknown"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Bay": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "interface": {
+          "$ref": "#/$defs/BayKind"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "interface",
+        "count"
+      ]
+    },
+    "BayKind": {
+      "type": "string",
+      "enum": [
+        "sata_2_5",
+        "sata_3_5",
+        "m2_nvme",
+        "m2_sata",
+        "msata",
+        "sd_card"
+      ]
+    },
+    "Cap": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "type": "integer",
+              "format": "uint16",
+              "maximum": 65535,
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "type": "integer",
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0
+        }
+      ]
+    },
+    "Cap10": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Nic"
+              }
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Nic"
+          }
+        }
+      ]
+    },
+    "Cap11": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/WifiGen"
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "$ref": "#/$defs/WifiGen"
+        }
+      ]
+    },
+    "Cap12": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/UsbPort"
+              }
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/UsbPort"
+          }
+        }
+      ]
+    },
+    "Cap13": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Bay"
+              }
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Bay"
+          }
+        }
+      ]
+    },
+    "Cap14": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/PowerInput"
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "$ref": "#/$defs/PowerInput"
+        }
+      ]
+    },
+    "Cap15": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/WanKind"
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "$ref": "#/$defs/WanKind"
+        }
+      ]
+    },
+    "Cap16": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/AdminAccess"
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "$ref": "#/$defs/AdminAccess"
+        }
+      ]
+    },
+    "Cap17": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/UpsTopology"
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "$ref": "#/$defs/UpsTopology"
+        }
+      ]
+    },
+    "Cap18": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/DcOutput"
+              }
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/DcOutput"
+          }
+        }
+      ]
+    },
+    "Cap19": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/Waveform"
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "$ref": "#/$defs/Waveform"
+        }
+      ]
+    },
+    "Cap2": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/Form"
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "$ref": "#/$defs/Form"
+        }
+      ]
+    },
+    "Cap20": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/RuntimePoint"
+              }
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RuntimePoint"
+          }
+        }
+      ]
+    },
+    "Cap21": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/BayKind"
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "$ref": "#/$defs/BayKind"
+        }
+      ]
+    },
+    "Cap22": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/DriveMedium"
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "$ref": "#/$defs/DriveMedium"
+        }
+      ]
+    },
+    "Cap23": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/UsbKind"
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "$ref": "#/$defs/UsbKind"
+        }
+      ]
+    },
+    "Cap24": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/OsSupport"
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "$ref": "#/$defs/OsSupport"
+        }
+      ]
+    },
+    "Cap25": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/Support"
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "$ref": "#/$defs/Support"
+        }
+      ]
+    },
+    "Cap3": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/Availability"
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "$ref": "#/$defs/Availability"
+        }
+      ]
+    },
+    "Cap4": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/Arch"
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "$ref": "#/$defs/Arch"
+        }
+      ]
+    },
+    "Cap5": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      ]
+    },
+    "Cap6": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "type": "boolean"
+        }
+      ]
+    },
+    "Cap7": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/Firmware"
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "$ref": "#/$defs/Firmware"
+        }
+      ]
+    },
+    "Cap8": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/VideoCaps"
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "$ref": "#/$defs/VideoCaps"
+        }
+      ]
+    },
+    "Cap9": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/Cooling"
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "$ref": "#/$defs/Cooling"
+        }
+      ]
+    },
+    "Category": {
+      "type": "string",
+      "enum": [
+        "computer",
+        "router",
+        "switch",
+        "access_point",
+        "ups",
+        "inverter",
+        "dc_ups",
+        "drive",
+        "enclosure",
+        "usb_nic",
+        "usb_hub",
+        "client"
+      ]
+    },
+    "ClientCaps": {
+      "type": "object",
+      "properties": {
+        "apps": {
+          "description": "Service ids with a client app on it.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "ipv6": {
+          "$ref": "#/$defs/Cap6",
+          "default": "unknown"
+        },
+        "plays": {
+          "description": "What it decodes without help.",
+          "type": "object",
+          "properties": {
+            "av1": {
+              "type": "boolean"
+            },
+            "h264": {
+              "type": "boolean"
+            },
+            "hevc_10": {
+              "type": "boolean"
+            },
+            "hevc_8": {
+              "type": "boolean"
+            },
+            "vp9": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "default": {}
+        }
+      },
+      "additionalProperties": false
+    },
+    "Compute": {
+      "type": "object",
+      "properties": {
+        "ac_power_recovery": {
+          "description": "Firmware can power the machine on when mains returns.",
+          "$ref": "#/$defs/Cap6",
+          "default": "unknown"
+        },
+        "arch": {
+          "$ref": "#/$defs/Cap4",
+          "default": "unknown"
+        },
+        "cooling": {
+          "$ref": "#/$defs/Cap9",
+          "default": "unknown"
+        },
+        "cores": {
+          "$ref": "#/$defs/Cap5",
+          "default": "unknown"
+        },
+        "firmware": {
+          "$ref": "#/$defs/Cap7",
+          "default": "unknown"
+        },
+        "nested_virtualization": {
+          "$ref": "#/$defs/Cap6",
+          "default": "unknown"
+        },
+        "ram_gb": {
+          "description": "As sold, or as configured in this pack.",
+          "$ref": "#/$defs/Cap5",
+          "default": "unknown"
+        },
+        "ram_max_gb": {
+          "$ref": "#/$defs/Cap5",
+          "default": "unknown"
+        },
+        "ram_soldered": {
+          "$ref": "#/$defs/Cap6",
+          "default": "unknown"
+        },
+        "threads": {
+          "$ref": "#/$defs/Cap5",
+          "default": "unknown"
+        },
+        "video": {
+          "description": "The hardware media engine.",
+          "$ref": "#/$defs/Cap8",
+          "default": "unknown"
+        },
+        "virtualization": {
+          "description": "Hardware virtualization a hypervisor can use.",
+          "$ref": "#/$defs/Cap6",
+          "default": "unknown"
+        },
+        "wake_on_lan": {
+          "$ref": "#/$defs/Cap6",
+          "default": "unknown"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Cooling": {
+      "type": "string",
+      "enum": [
+        "fanless",
+        "fan"
+      ]
+    },
+    "DcOutput": {
+      "type": "object",
+      "properties": {
+        "connector": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "max_ma": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "volts_mv": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "volts_mv",
+        "max_ma"
+      ]
+    },
+    "DriveCaps": {
+      "type": "object",
+      "properties": {
+        "capacity_gb": {
+          "$ref": "#/$defs/Cap5",
+          "default": "unknown"
+        },
+        "interface": {
+          "$ref": "#/$defs/Cap21",
+          "default": "unknown"
+        },
+        "medium": {
+          "$ref": "#/$defs/Cap22",
+          "default": "unknown"
+        },
+        "needs_12v": {
+          "description": "3.5 inch drives cannot run from USB bus power.",
+          "$ref": "#/$defs/Cap6",
+          "default": "unknown"
+        },
+        "rated_24x7": {
+          "$ref": "#/$defs/Cap6",
+          "default": "unknown"
+        }
+      },
+      "additionalProperties": false
+    },
+    "DriveMedium": {
+      "type": "string",
+      "enum": [
+        "hdd",
+        "ssd"
+      ]
+    },
+    "Firmware": {
+      "type": "string",
+      "enum": [
+        "uefi",
+        "bios",
+        "uefi_and_bios",
+        "apple_silicon",
+        "uboot",
+        "android_bootloader"
+      ]
+    },
+    "Form": {
+      "type": "string",
+      "enum": [
+        "laptop",
+        "desktop",
+        "mini_pc",
+        "sbc",
+        "phone",
+        "tablet",
+        "nas",
+        "rack",
+        "other"
+      ]
+    },
+    "NetCaps": {
+      "type": "object",
+      "properties": {
+        "nic": {
+          "description": "Wired ports. `value: []` means none, which is not the same as unknown.",
+          "$ref": "#/$defs/Cap10",
+          "default": "unknown"
+        },
+        "wifi": {
+          "$ref": "#/$defs/Cap11",
+          "default": "unknown"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Nic": {
+      "type": "object",
+      "properties": {
+        "speed_mbps": {
+          "$ref": "#/$defs/Cap5",
+          "default": "unknown"
+        }
+      },
+      "additionalProperties": false
+    },
+    "OsSupport": {
+      "type": "object",
+      "properties": {
+        "charge_limit": {
+          "description": "The OS can cap battery charge.",
+          "$ref": "#/$defs/Cap6",
+          "default": "unknown"
+        },
+        "gaps": {
+          "description": "Short phrases: \"no Thunderbolt\".",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "level": {
+          "$ref": "#/$defs/Support"
+        },
+        "lid_closed": {
+          "description": "Keeps running with the lid shut.",
+          "$ref": "#/$defs/Cap25",
+          "default": "unknown"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "level"
+      ]
+    },
+    "PackKind": {
+      "oneOf": [
+        {
+          "description": "A generic teaching machine. Not a product.",
+          "type": "string",
+          "const": "archetype"
+        },
+        {
+          "description": "A real product. Every value needs a source.",
+          "type": "string",
+          "const": "device"
+        },
+        {
+          "description": "Entered by the learner in a build. Never read from a file.",
+          "type": "string",
+          "const": "learner"
+        }
+      ]
+    },
+    "Ports": {
+      "type": "object",
+      "properties": {
+        "usb": {
+          "$ref": "#/$defs/Cap12",
+          "default": "unknown"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Power": {
+      "type": "object",
+      "properties": {
+        "idle_w": {
+          "$ref": "#/$defs/Cap5",
+          "default": "unknown"
+        },
+        "input": {
+          "$ref": "#/$defs/Cap14",
+          "default": "unknown"
+        },
+        "load_w": {
+          "$ref": "#/$defs/Cap5",
+          "default": "unknown"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PowerInput": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "ac_230"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "dc"
+            },
+            "max_ma": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "volts_mv": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "volts_mv",
+            "max_ma"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "usb_c_pd"
+            },
+            "watts": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "watts"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "usb_5v"
+            },
+            "max_ma": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "max_ma"
+          ]
+        }
+      ]
+    },
+    "RouterCaps": {
+      "type": "object",
+      "properties": {
+        "admin": {
+          "$ref": "#/$defs/Cap16",
+          "default": "unknown"
+        },
+        "bridge_mode": {
+          "$ref": "#/$defs/Cap6",
+          "default": "unknown"
+        },
+        "dhcp_can_disable": {
+          "$ref": "#/$defs/Cap6",
+          "default": "unknown"
+        },
+        "dhcp_reservation": {
+          "$ref": "#/$defs/Cap6",
+          "default": "unknown"
+        },
+        "dmz": {
+          "$ref": "#/$defs/Cap6",
+          "default": "unknown"
+        },
+        "ipv6": {
+          "$ref": "#/$defs/Cap6",
+          "default": "unknown"
+        },
+        "ipv6_firewall_configurable": {
+          "$ref": "#/$defs/Cap6",
+          "default": "unknown"
+        },
+        "lan": {
+          "$ref": "#/$defs/Cap10",
+          "default": "unknown"
+        },
+        "lan_dns_setting": {
+          "description": "The DHCP server can hand out a custom DNS server.",
+          "$ref": "#/$defs/Cap6",
+          "default": "unknown"
+        },
+        "port_forwarding": {
+          "$ref": "#/$defs/Cap6",
+          "default": "unknown"
+        },
+        "supplied_by": {
+          "description": "ISP profile id, for ISP-supplied units. A label, never read by rules.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "udp_timeout_s": {
+          "$ref": "#/$defs/Cap5",
+          "default": "unknown"
+        },
+        "upnp": {
+          "$ref": "#/$defs/Cap6",
+          "default": "unknown"
+        },
+        "wan": {
+          "$ref": "#/$defs/Cap15",
+          "default": "unknown"
+        }
+      },
+      "additionalProperties": false
+    },
+    "RuntimePoint": {
+      "type": "object",
+      "properties": {
+        "load_w": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "minutes": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "load_w",
+        "minutes"
+      ]
+    },
+    "StorageCaps": {
+      "type": "object",
+      "properties": {
+        "bays": {
+          "description": "Internal slots a learner can fill.",
+          "$ref": "#/$defs/Cap13",
+          "default": "unknown"
+        },
+        "boot_from_usb": {
+          "$ref": "#/$defs/Cap6",
+          "default": "unknown"
+        },
+        "soldered_gb": {
+          "description": "Built-in storage that cannot be changed.",
+          "$ref": "#/$defs/Cap5",
+          "default": "unknown"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Support": {
+      "type": "string",
+      "enum": [
+        "full",
+        "partial",
+        "none"
+      ]
+    },
+    "UnknownMark": {
+      "type": "string",
+      "enum": [
+        "unknown"
+      ]
+    },
+    "UpsCaps": {
+      "type": "object",
+      "properties": {
+        "battery_external": {
+          "description": "Inverters: the battery is a separate purchase.",
+          "$ref": "#/$defs/Cap6",
+          "default": "unknown"
+        },
+        "battery_wh": {
+          "$ref": "#/$defs/Cap5",
+          "default": "unknown"
+        },
+        "dc_outputs": {
+          "$ref": "#/$defs/Cap18",
+          "default": "unknown"
+        },
+        "max_w": {
+          "$ref": "#/$defs/Cap5",
+          "default": "unknown"
+        },
+        "outlets": {
+          "$ref": "#/$defs/Cap5",
+          "default": "unknown"
+        },
+        "runtime": {
+          "description": "The maker's runtime chart.",
+          "$ref": "#/$defs/Cap20",
+          "default": "unknown"
+        },
+        "topology": {
+          "$ref": "#/$defs/Cap17",
+          "default": "unknown"
+        },
+        "transfer_ms": {
+          "$ref": "#/$defs/Cap5",
+          "default": "unknown"
+        },
+        "va": {
+          "$ref": "#/$defs/Cap5",
+          "default": "unknown"
+        },
+        "waveform": {
+          "$ref": "#/$defs/Cap19",
+          "default": "unknown"
+        }
+      },
+      "additionalProperties": false
+    },
+    "UpsTopology": {
+      "type": "string",
+      "enum": [
+        "offline",
+        "line_interactive",
+        "online",
+        "inverter",
+        "dc"
+      ]
+    },
+    "UsbKind": {
+      "type": "string",
+      "enum": [
+        "usb2_a",
+        "usb5_a",
+        "usb10_a",
+        "usb5_c",
+        "usb10_c",
+        "usb40_c"
+      ]
+    },
+    "UsbPort": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "kind": {
+          "$ref": "#/$defs/UsbKind"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "count"
+      ]
+    },
+    "VideoCaps": {
+      "type": "object",
+      "properties": {
+        "apis": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/AccelApi"
+          }
+        },
+        "decode": {
+          "type": "object",
+          "properties": {
+            "av1": {
+              "type": "boolean"
+            },
+            "h264": {
+              "type": "boolean"
+            },
+            "hevc_10": {
+              "type": "boolean"
+            },
+            "hevc_8": {
+              "type": "boolean"
+            },
+            "vp9": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "default": {}
+        },
+        "encode": {
+          "type": "object",
+          "properties": {
+            "av1": {
+              "type": "boolean"
+            },
+            "h264": {
+              "type": "boolean"
+            },
+            "hevc_10": {
+              "type": "boolean"
+            },
+            "hevc_8": {
+              "type": "boolean"
+            },
+            "vp9": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "default": {}
+        }
+      },
+      "additionalProperties": false
+    },
+    "WanKind": {
+      "type": "string",
+      "enum": [
+        "gpon_fibre",
+        "epon_fibre",
+        "ethernet",
+        "dsl",
+        "cellular"
+      ]
+    },
+    "Waveform": {
+      "type": "string",
+      "enum": [
+        "sine",
+        "stepped_sine",
+        "square"
+      ]
+    },
+    "WifiGen": {
+      "type": "string",
+      "enum": [
+        "none",
+        "wifi4",
+        "wifi5",
+        "wifi6",
+        "wifi6e",
+        "wifi7"
+      ]
+    }
+  }
+}

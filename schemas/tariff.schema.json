@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Tariff",
+  "description": "One DISCOM's tariff for one category of customer.",
+  "type": "object",
+  "properties": {
+    "category": {
+      "type": "string"
+    },
+    "discom": {
+      "type": "string"
+    },
+    "duty_permille": {
+      "description": "Electricity duty as a share of energy charges.",
+      "$ref": "#/$defs/Cap",
+      "default": "unknown"
+    },
+    "effective_from": {
+      "type": "string"
+    },
+    "fixed_paise_per_kw_month": {
+      "description": "A fixed charge per kW of sanctioned load. Shown, not added.",
+      "$ref": "#/$defs/Cap",
+      "default": "unknown"
+    },
+    "fixed_paise_per_month": {
+      "description": "Shown, not added to the homelab's marginal cost.",
+      "$ref": "#/$defs/Cap",
+      "default": "unknown"
+    },
+    "free_units": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FreeUnits"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "id": {
+      "type": "string"
+    },
+    "note": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "retrieved_at": {
+      "type": "string",
+      "default": ""
+    },
+    "slabs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Slab"
+      }
+    },
+    "source": {
+      "type": "string",
+      "default": ""
+    },
+    "state": {
+      "type": "string"
+    },
+    "teaching": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "state",
+    "discom",
+    "category",
+    "effective_from",
+    "slabs"
+  ],
+  "$defs": {
+    "Basis": {
+      "description": "How good the source behind a value is.",
+      "oneOf": [
+        {
+          "description": "The maker's spec page, datasheet, manual or official documentation.",
+          "type": "string",
+          "const": "official"
+        },
+        {
+          "description": "An independent measurement published by a named reviewer.",
+          "type": "string",
+          "const": "review"
+        },
+        {
+          "description": "A forum, wiki, issue tracker or user report.",
+          "type": "string",
+          "const": "community"
+        }
+      ]
+    },
+    "Cap": {
+      "description": "One capability value. It is a plain value in a teaching pack, a value with\nits source in a real one, or the word `unknown`.\n\nRead by hand rather than as a derived untagged enum: that keeps the error\nmessages about the value itself, and keeps the WebAssembly small.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/Basis"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retrieved_at": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "value": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "retrieved_at"
+          ]
+        },
+        {
+          "$ref": "#/$defs/UnknownMark"
+        },
+        {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      ]
+    },
+    "FreeUnits": {
+      "type": "object",
+      "properties": {
+        "condition": {
+          "description": "The learner says whether it applies.",
+          "type": "string"
+        },
+        "upto_kwh": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "upto_kwh",
+        "condition"
+      ]
+    },
+    "Slab": {
+      "type": "object",
+      "properties": {
+        "paise_per_kwh": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "upto_kwh": {
+          "description": "Missing on the last slab, which covers the rest.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "paise_per_kwh"
+      ]
+    },
+    "UnknownMark": {
+      "type": "string",
+      "enum": [
+        "unknown"
+      ]
+    }
+  }
+}

@@ -8,9 +8,12 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 use crate::model::{Id, Target, World};
+pub use crate::packs::{
+    Cap, DevicePack, MediaFormat, OsPack, Outage, PackKind, RuntimePack, ServicePack, Tariff, Template, UnknownMark,
+};
 
 /// Bumped whenever the bundle format changes incompatibly.
-pub const SCHEMA_VERSION: u32 = 3;
+pub const SCHEMA_VERSION: u32 = 4;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -19,6 +22,22 @@ pub struct Bundle {
     /// Archetypes and real devices share one schema and one map.
     #[serde(default)]
     pub devices: BTreeMap<Id, DevicePack>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub os: BTreeMap<Id, OsPack>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub runtimes: BTreeMap<Id, RuntimePack>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub services: BTreeMap<Id, ServicePack>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub tariffs: BTreeMap<Id, Tariff>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub outages: BTreeMap<Id, Outage>,
+    /// Typical bitrates per media format, from `data/reference/media.yaml`.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub media: BTreeMap<Id, MediaFormat>,
+    /// Starting builds for the sandbox.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub templates: BTreeMap<Id, Template>,
     #[serde(default)]
     pub isps: BTreeMap<Id, IspProfile>,
     #[serde(default)]
@@ -55,107 +74,44 @@ impl Bundle {
         Self {
             schema_version: SCHEMA_VERSION,
             devices: BTreeMap::new(),
+            os: BTreeMap::new(),
+            runtimes: BTreeMap::new(),
+            services: BTreeMap::new(),
+            tariffs: BTreeMap::new(),
+            outages: BTreeMap::new(),
+            media: BTreeMap::new(),
+            templates: BTreeMap::new(),
             isps: BTreeMap::new(),
             explanations: BTreeMap::new(),
             missions: BTreeMap::new(),
             tracks: Vec::new(),
         }
     }
-}
 
-// ---------------------------------------------------------------- devices
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum UnknownMark {
-    Unknown,
-}
-
-/// One capability value. It is a plain value in an archetype, a value with
-/// its source in a real device, or the word `unknown`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum Cap<T> {
-    Sourced { value: T, source: String, retrieved_at: String },
-    Unknown(UnknownMark),
-    Value(T),
-}
-
-impl<T> Default for Cap<T> {
-    fn default() -> Self {
-        Cap::Unknown(UnknownMark::Unknown)
-    }
-}
-
-impl<T> Cap<T> {
-    pub fn get(&self) -> Option<&T> {
-        match self {
-            Cap::Sourced { value, .. } | Cap::Value(value) => Some(value),
-            Cap::Unknown(_) => None,
+    /// Add the sandbox catalog to a loaded bundle. Packs already present stay.
+    pub fn merge(&mut self, catalog: Bundle) {
+        fn add<T>(into: &mut BTreeMap<Id, T>, from: BTreeMap<Id, T>) {
+            for (id, pack) in from {
+                into.entry(id).or_insert(pack);
+            }
         }
+        add(&mut self.devices, catalog.devices);
+        add(&mut self.os, catalog.os);
+        add(&mut self.runtimes, catalog.runtimes);
+        add(&mut self.services, catalog.services);
+        add(&mut self.tariffs, catalog.tariffs);
+        add(&mut self.outages, catalog.outages);
+        add(&mut self.media, catalog.media);
+        add(&mut self.templates, catalog.templates);
+        add(&mut self.isps, catalog.isps);
+        add(&mut self.explanations, catalog.explanations);
     }
-
-    /// A bare value with no source. Fine in an archetype, not in a real device.
-    pub fn is_unsourced_value(&self) -> bool {
-        matches!(self, Cap::Value(_))
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum PackKind {
-    /// A generic teaching machine. Not a product.
-    Archetype,
-    /// A real product. Every value needs a source.
-    Device,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct DevicePack {
-    pub id: Id,
-    pub kind: PackKind,
-    pub label: String,
-    #[serde(default)]
-    pub capabilities: Capabilities,
-    #[serde(default)]
-    pub power: Power,
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Capabilities {
-    #[serde(default)]
-    pub arch: Cap<String>,
-    #[serde(default)]
-    pub ram_gb: Cap<u32>,
-    #[serde(default)]
-    pub nic: Vec<Nic>,
-    #[serde(default)]
-    pub virtualization: Cap<bool>,
-    #[serde(default)]
-    pub igpu_transcode: Cap<bool>,
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Nic {
-    #[serde(default)]
-    pub speed_mbps: Cap<u32>,
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Power {
-    #[serde(default)]
-    pub idle_w: Cap<u32>,
-    #[serde(default)]
-    pub load_w: Cap<u32>,
 }
 
 // ------------------------------------------------------------------- isps
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum ProfileKind {
     /// Invented for teaching. Makes no claim about any real provider.
@@ -273,7 +229,8 @@ pub struct DepthText {
     pub hints: Vec<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct Layout {
     pub wide: BTreeMap<Id, [i32; 2]>,

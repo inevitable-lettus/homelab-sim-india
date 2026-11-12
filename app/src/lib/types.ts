@@ -6,7 +6,7 @@
 export type Id = string;
 export type Status = 'pass' | 'fail' | 'unknown';
 export type Severity = 'error' | 'warning' | 'info';
-export type Provenance = 'official' | 'community' | 'teaching' | 'line_check';
+export type Provenance = 'official' | 'community' | 'teaching' | 'line_check' | 'learner';
 export type Tri = 'yes' | 'no' | 'unknown';
 export type Proto = 'tcp' | 'udp';
 export type Depth = 'guided' | 'challenge';

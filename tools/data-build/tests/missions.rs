@@ -787,11 +787,11 @@ fn a_new_device_is_one_yaml_file_and_no_code() {
     fs::write(
         dir.join("data/devices/test-box.yaml"),
         format!(
-            "id: test-box\nkind: device\nlabel: Test box\ncapabilities:\n  arch: {}\n  ram_gb: {}\n  nic: [{{ speed_mbps: {} }}]\n  virtualization: {}\n  igpu_transcode: unknown\npower: {{ idle_w: unknown, load_w: unknown }}\n",
-            sourced("arm64"),
+            "id: test-box\nkind: device\ncategory: computer\nlabel: Test box\ncompute:\n  arch: {}\n  ram_gb: {}\n  virtualization: {}\nnetwork:\n  nic: {}\npower: {{ idle_w: unknown, load_w: unknown }}\n",
+            sourced("aarch64"),
             sourced("4"),
-            sourced("1000"),
             sourced("false"),
+            sourced("[{ speed_mbps: 1000 }]"),
         ),
     )
     .expect("write");
@@ -815,7 +815,7 @@ fn the_data_build_refuses_unsourced_claims() {
     let dir = scratch("unsourced");
     fs::write(
         dir.join("data/devices/bare.yaml"),
-        "id: bare\nkind: device\nlabel: Bare\ncapabilities:\n  arch: x86_64\n  ram_gb: unknown\n  nic: []\n  virtualization: true\n  igpu_transcode: unknown\npower: { idle_w: unknown, load_w: unknown }\n",
+        "id: bare\nkind: device\ncategory: computer\nlabel: Bare\ncompute:\n  arch: x86_64\n  ram_gb: unknown\n  virtualization: true\nnetwork:\n  nic: []\npower: { idle_w: unknown, load_w: unknown }\n",
     )
     .expect("write");
     fs::write(
@@ -824,8 +824,8 @@ fn the_data_build_refuses_unsourced_claims() {
     )
     .expect("write");
     let errors = data_build::build(&dir).expect_err("must fail");
-    assert!(errors.iter().any(|e| e.contains("bare.yaml") && e.contains("`arch`")), "{errors:?}");
-    assert!(errors.iter().any(|e| e.contains("bare.yaml") && e.contains("`virtualization`")), "{errors:?}");
+    assert!(errors.iter().any(|e| e.contains("bare.yaml") && e.contains("`compute.arch`")), "{errors:?}");
+    assert!(errors.iter().any(|e| e.contains("bare.yaml") && e.contains("`compute.virtualization`")), "{errors:?}");
     assert!(errors.iter().any(|e| e.contains("real-net.yaml") && e.contains("ipv4_cgnat")), "{errors:?}");
     assert!(!errors.iter().any(|e| e.contains("static_ipv4")), "an unknown claim needs no source: {errors:?}");
 }

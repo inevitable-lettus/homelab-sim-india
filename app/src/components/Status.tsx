@@ -13,6 +13,8 @@ export function verdictWord(status: Status, provenance: Provenance): string {
       return 'Reported to work';
     case 'line_check':
       return 'Based on your line check';
+    case 'learner':
+      return 'Based on what you entered';
     case 'teaching':
       return 'In this model';
   }

@@ -12,6 +12,7 @@ pub mod facts;
 pub mod grade;
 pub mod ip;
 pub mod model;
+pub mod packs;
 pub mod physics;
 pub mod reason;
 mod rules;
@@ -55,6 +56,8 @@ pub enum Provenance {
     Teaching,
     /// The learner's own line check.
     LineCheck,
+    /// Values the learner typed in for a device we have no pack for.
+    Learner,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

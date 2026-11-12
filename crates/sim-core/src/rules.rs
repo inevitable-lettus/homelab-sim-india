@@ -129,7 +129,7 @@ pub(crate) fn findings(net: &Net, bundle: &Bundle) -> Vec<Finding> {
                             _ => None,
                         })
                         .and_then(|device| bundle.devices.get(device));
-                    let capable = pack.and_then(|pack| pack.capabilities.virtualization.get().copied());
+                    let capable = pack.and_then(|pack| pack.compute.as_ref().and_then(|c| c.virtualization.copied()));
                     let both = vec![id.clone(), parent.clone()];
                     let mut f = match capable {
                         Some(true) => finding(rule, Status::Pass, Severity::Info, rule, both),

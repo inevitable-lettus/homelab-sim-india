@@ -382,3 +382,26 @@ Four data agents drafted P0 packs into `data-drafts/` (gitignored), each with an
 - **Not drafted:** the DC mini UPS and the ISP router pack. The maker pages would not load.
 - **Weak spots the agents flagged:** the T480 is not pinned to one configuration; India availability is `unknown` for the Pi and the MacBook Air; the BSES tariff may be out of date; `battery_wh` for the APC unit is computed, not published; MSEDCL slabs include the wheeling charge.
 - **Schema gaps they hit**, for S1 to settle: no `armv6`, `ppc64el` or `s390x` arch; `host_network` cannot say "localhost only"; no per-kW fixed charge in a tariff; no optional or outbound-only ports; no minimum OS version on an install; `battery.wh` is a whole number.
+
+## Sandbox S1: schema v4 and data build (done 2026-11-12)
+
+- `SCHEMA_VERSION` is 4. Pack types live in `crates/sim-core/src/packs.rs`: `Cap` with `basis` and `note`, `PackKind::Learner`, `Category`, every device section, OS, runtime, service, tariff, outage, media format and template packs. `bundle.rs` re-exports them.
+- The three archetypes are migrated (`category`, `compute`, `network`). Missions did not change.
+- **Fixture:** `mission-reports.tsv` changed in one token per line only, `"schema_version":3` to `4` (23 replacements on 23 lines, then the fixture test passed unchanged). Nothing else in any report moved.
+- Data build: loads `data/os`, `data/runtimes`, `data/services`, `data/power/tariffs`, `data/power/outages`, `data/reference/media.yaml`, `content/sandbox/templates`. Checks: category section allow-list, sourcing for every real pack (the `Audit` trait walks every `Cap`), id references, tariff slab order, tracking parameters in source links, templates settle. Errors name the file and the field (`serde_path_to_error`).
+- Output is split: `bundle.json` keeps what missions name, `catalog.json` holds the rest. `Bundle::merge` joins them.
+- JSON Schemas are generated into `schemas/` (`cargo run -p data-build -- schemas`). A test fails when they are stale.
+- TypeScript mirror: `app/src/lib/packs.ts`.
+
+Decisions taken without the owner, cheap to change:
+
+- OS, runtime, service, tariff and media packs take `teaching: true` for generic teaching packs. Outages use `kind: teaching | real` as the spec says. A real pack needs sourced values and at least one entry in `sources`.
+- Schema gaps the data agents hit: added `armv6`, `ppc64le`, `s390x`; `host_network` takes `yes | limited | no` (a plain true or false still reads); tariffs have `fixed_paise_per_kw_month`; ports have `optional` and `direction`; an install has `os_min_version` (shown, not read by rules). `battery.wh` stays a whole number.
+- Drafts use `Cap` in more places than the spec (`needs.host_network_for`, `needs.static_lan_ip`, `needs.transcode_apis.*`, `paid_features`, `adapter.provides.*`). The schema follows the drafts.
+
+Gotchas:
+
+- **WASM size.** Parsing the pack types took the module from 206 KB to 293 KB gzipped and broke the 512 KB budget. Fix: `opt-level = "z"` and `wasm-opt -Oz` (npm dev dependency `binaryen`, run by `scripts/build-wasm.sh`). Total is now 492,667 B. There is about 19 KB of headroom for S2 and S3.
+- `Cap` is deserialized by hand. A map whose first key is one of `value, source, retrieved_at, basis, note` is a sourced value; any other map is the value itself. No section type may use those names for its own top-level fields.
+- One-file tests in S1 prove a pack of every kind and category loads and lands in the catalog. Rule-level one-file tests come with the rules in S2 and S3.
+

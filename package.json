@@ -18,5 +18,8 @@
     "check": "sh scripts/check.sh",
     "guest": "bash tools/guest/build.sh",
     "e2e": "npm run build && npm run e2e -w app"
+  },
+  "devDependencies": {
+    "binaryen": "132.0.0"
   }
 }
