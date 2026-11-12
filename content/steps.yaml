@@ -136,6 +136,9 @@ tunnel-handshake-failed:
 tunnel-unknown-peer:
   title: Peer not recognised
   line: The other end does not list this device's public key, so it ignores the packet.
+tunnel-wrong-peer-key:
+  title: Wrong key for this peer
+  line: The sender used a public key that is not this device's key, so the packet cannot be opened.
 tunnel-allowed-ips:
   title: Address not allowed for this peer
   line: The address is outside the peer's AllowedIPs, so the tunnel refuses the packet.
@@ -231,6 +234,9 @@ goal-unknown:
   line: We don't have the data to decide this goal either way.
 
 # Graded files.
+artifact-ok:
+  title: The file is good
+  line: The file reads correctly. Whether the tunnel works is decided by the attempts.
 artifact-missing:
   title: File not found
   line: The file this mission grades does not exist yet.
@@ -240,6 +246,9 @@ artifact-invalid:
 artifact-key-mismatch:
   title: The keys do not match
   line: The public key you registered does not belong to the private key in the config.
+artifact-key-unchecked:
+  title: The key could not be checked
+  line: The config could not be read, so there is no private key to compare this public key with.
 
 # Concept pages that are not a reason on their own.
 three-addresses:

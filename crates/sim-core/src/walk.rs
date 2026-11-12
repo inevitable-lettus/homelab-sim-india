@@ -51,8 +51,16 @@ pub(crate) struct Flow {
 #[derive(Debug, Clone)]
 enum Payload {
     Plain,
-    Handshake { tun: usize },
-    Data { tun: usize, inner: Flow },
+    /// `tun` and `peer` say which tunnel sent this, and to which of its peers.
+    Handshake {
+        tun: usize,
+        peer: usize,
+    },
+    Data {
+        tun: usize,
+        peer: usize,
+        inner: Flow,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -337,16 +345,21 @@ impl<'a> Engine<'a> {
         }
     }
 
-    /// Tunnels with a keepalive dial out as soon as they come up, and keep
-    /// doing so. That is what holds the NAT mappings open.
+    /// A tunnel that knows where its peer is has dialled it. With a keepalive
+    /// it keeps dialling, and that is what holds the NAT mappings open.
+    /// Without one it last spoke when the tunnel was last used, `idle_s` ago.
     pub fn establish(&mut self) {
         for t in 0..self.tuns.len() {
             for p in 0..self.tuns[t].peers.len() {
                 let peer = &self.tuns[t].peers[p];
-                if let (Some(keepalive), Some(_)) = (peer.keepalive, peer.endpoint) {
-                    let age = keepalive.min(self.idle_s);
-                    self.ensure_session(t, p, age);
+                if peer.endpoint.is_none() {
+                    continue;
                 }
+                let age = match peer.keepalive {
+                    Some(keepalive) => keepalive.min(self.idle_s),
+                    None => self.idle_s,
+                };
+                self.ensure_session(t, p, age);
             }
         }
     }
@@ -427,8 +440,12 @@ impl<'a> Engine<'a> {
             reply: false,
         };
         let id = format!("setup-{}-{}", self.net.id(host), tun.id);
-        let pkt = Pkt { flow, payload: Payload::Handshake { tun: t }, age_s };
+        let pkt = Pkt { flow, payload: Payload::Handshake { tun: t, peer: p }, age_s };
         let ok = matches!(self.walk(host, pkt, LegRole::Setup, id, Some(t)), End::Delivered { .. });
+        if !ok && self.tuns[t].network.is_none() {
+            // A hand-made tunnel that could not come up is worth showing.
+            self.used.insert(t);
+        }
         self.sessions.insert((t, p), ok);
     }
 
@@ -436,7 +453,7 @@ impl<'a> Engine<'a> {
         let (kind, inner) = match &pkt.payload {
             Payload::Plain => (PacketKind::Data, None),
             Payload::Handshake { .. } => (PacketKind::Handshake, None),
-            Payload::Data { tun, inner } => (
+            Payload::Data { tun, inner, .. } => (
                 PacketKind::Data,
                 Some(InnerView {
                     tunnel: self.tuns[*tun].id.clone(),
@@ -628,7 +645,7 @@ impl<'a> Engine<'a> {
             reply: false,
         };
         let reason = if originating { Reason::TunnelEncapsulate } else { Reason::HubForwards };
-        *pkt = Pkt { flow: outer, payload: Payload::Data { tun: t, inner }, age_s: 0 };
+        *pkt = Pkt { flow: outer, payload: Payload::Data { tun: t, peer: p, inner }, age_s: 0 };
         self.used.insert(t);
         cx.emit(StepAction::Encapsulate, self.view(pkt), Some(before), reason, None);
         Next::Out(uplink)
@@ -636,8 +653,8 @@ impl<'a> Engine<'a> {
 
     fn tunnel_receive(&mut self, cx: &mut Cx, cur: usize, host: &Host, t: usize, pkt: &mut Pkt) -> Next {
         let before = self.view(pkt);
-        let sender = match &pkt.payload {
-            Payload::Handshake { tun } | Payload::Data { tun, .. } => *tun,
+        let (sender, via) = match &pkt.payload {
+            Payload::Handshake { tun, peer } | Payload::Data { tun, peer, .. } => (*tun, *peer),
             Payload::Plain => return cx.drop(Reason::NoService, before, None),
         };
         let tun = &self.tuns[t];
@@ -655,6 +672,15 @@ impl<'a> Engine<'a> {
         let Some(p) = peer else {
             return cx.drop(Reason::TunnelUnknownPeer, before, None);
         };
+        // The sender locked the packet to the key it has for us. If that is
+        // not our key, we cannot open it.
+        if tun.network.is_none()
+            && let (Some(ours), Some(theirs)) =
+                (&tun.key, self.tuns[sender].peers.get(via).and_then(|v| v.key.as_ref()))
+            && ours != theirs
+        {
+            return cx.drop(Reason::TunnelWrongPeerKey, before, None);
+        }
         // Roaming: remember the address this peer was last heard from.
         self.learned.insert((t, p), pkt.flow.src);
         self.used.insert(t);

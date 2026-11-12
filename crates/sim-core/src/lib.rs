@@ -17,6 +17,8 @@ pub mod reason;
 mod rules;
 pub mod trace;
 mod walk;
+pub mod wireguard;
+pub mod x25519;
 
 use serde::{Deserialize, Serialize};
 

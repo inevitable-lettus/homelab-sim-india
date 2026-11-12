@@ -323,3 +323,17 @@ Community ISP reports through GitHub Discussions with a structured form (ISP, ci
 - **Spikes:** `spikes/` has its own `package.json` and is not an npm workspace, so `npm ci` at the root ignores it. Pages: `cd spikes && npm run dev`, then `/terminal/` and `/trace/`. Nothing in `app/src` imports from it. Keep it until Phase 7 has what it needs.
 - **Known:** `npm audit` reports 10 moderate findings, all one `minimatch` issue inside ESLint tooling. Dev-only, not shipped.
 - **Update rule:** at the end of each phase, update Current status, mark the phase done with the date, and record gotchas here. Change Architecture, Design or Animations only when the design itself changes.
+
+## Phase 7 in progress (stopped 2026-11-11 on a usage limit; checkpoint committed 2026-11-12)
+
+Committed as a checkpoint after `npm run check` passed on 2026-11-12, all Rust tests passing (27 core, 21 data-build, Missions 1 to 4 fixtures unchanged):
+
+- `crates/sim-core/src/x25519.rs`: Curve25519 and key base64, checked against RFC 7748 and a Node key pair.
+- `crates/sim-core/src/wireguard.rs`: `wg-quick` config parser with line-numbered problems, and `public_key()` (what `wg pubkey` prints). The private key is never stored or echoed.
+- `crates/sim-core/src/artifacts.rs`: a config file sets the tunnel on `spec.node` (disabled until the file parses). A public key file sets the key the `register_on` host has for that peer (an empty string when missing, which never matches). New reasons `artifact-ok`, `artifact-key-unchecked`, `tunnel-wrong-peer-key`, with text in `content/steps.yaml`.
+- `walk.rs`: `Payload` carries the sender's peer index; a receiver drops a packet locked to a key that is not its own; a failed handshake on a hand-made tunnel is shown as a setup leg.
+- **Decision:** a peer with an endpoint and no keepalive is modelled as having last dialled when the tunnel was last used, `idle_s` ago. So "no keepalive" works at `idle_s: 0` and fails with `nat-mapping-expired` at `idle_s: 600`, as the curriculum says.
+
+Still to do for Phase 7: `missions/write-the-tunnel/mission.yaml` (hub host at a static public address with `forwarding: true`, phone and hub with real public keys, server tunnel `wg0` disabled, attempts at idle 0 and 600) and its Rust tests for the win and the four intended failures; add it to `content/tracks.yaml`; WASM export of `wireguard::public_key`; Files panel with editor and key tool; opt-in v86 terminal; image build in CI with GPL sources; hosting limits; Playwright test; docs; commit and push.
+
+Sandbox data drafts: OS and runtime packs and device packs are drafted in `data-drafts/` (gitignored, unreviewed). The service and tariff/UPS agents had not reported when this was written.

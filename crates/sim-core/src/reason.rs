@@ -70,6 +70,7 @@ reasons! {
     TunnelNoEndpoint => "tunnel-peer-no-endpoint",
     TunnelHandshakeFailed => "tunnel-handshake-failed",
     TunnelUnknownPeer => "tunnel-unknown-peer",
+    TunnelWrongPeerKey => "tunnel-wrong-peer-key",
     TunnelAllowedIps => "tunnel-allowed-ips",
     TunnelMtuExceeded => "tunnel-mtu-exceeded",
     OverlayNotJoined => "overlay-peer-not-joined",
@@ -103,9 +104,11 @@ reasons! {
     GoalWrongAnswer => "goal-wrong-answer",
     GoalUnknown => "goal-unknown",
     // Graded files.
+    ArtifactOk => "artifact-ok",
     ArtifactMissing => "artifact-missing",
     ArtifactInvalid => "artifact-invalid",
     ArtifactKeyMismatch => "artifact-key-mismatch",
+    ArtifactKeyUnchecked => "artifact-key-unchecked",
 }
 
 impl Serialize for Reason {
