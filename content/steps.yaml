@@ -30,7 +30,7 @@ cgnat-mapping-created:
   line: The ISP swaps the source for a shared public address and adds a row to its table.
 cgnat-mapping-hit:
   title: Carrier NAT lets the reply in
-  line: The packet matches a row that an outbound packet created, so the ISP passes it in.
+  line: The packet matches a row that an outgoing packet created, so the ISP passes it in.
 cgnat-source-rewrite:
   title: Carrier NAT reuses its row
   line: The ISP already has a row for this connection and swaps the source for the shared public address again.
@@ -100,7 +100,7 @@ ipv6-no-nat:
   line: IPv6 addresses are public end to end, so this hop forwards the packet unchanged.
 router-ipv6-firewall:
   title: Blocked by the router's IPv6 firewall
-  line: The router drops inbound IPv6 that nothing inside asked for, unless a rule allows it.
+  line: The router drops incoming IPv6 that nothing inside asked for, unless a rule allows it.
 
 # Tunnels and overlays.
 tunnel-dials-out:
@@ -169,7 +169,7 @@ port-forward-usable:
   line: Packets from the internet can reach this forward, and a service is listening behind it.
 forward-behind-cgnat:
   title: The port forward cannot be reached
-  line: This forward is correct, but the ISP's carrier NAT drops inbound packets before they reach the router.
+  line: This forward is correct, but the ISP's carrier NAT drops incoming packets before they reach the router.
 forward-no-service:
   title: The forward leads to nothing
   line: The forward works, but no service is listening on the device and port it points at.

@@ -2,17 +2,17 @@
 id: dial-out
 order: 4
 title: Dial out to get in
-concept: Outbound connections, NAT mappings and a mesh VPN
+concept: Outgoing connections, NAT rows and a mesh VPN
 scenario: >-
-  Arjun's ISP drops anything that arrives uninvited. But it lets replies in, or
-  he could not browse the web at all. So let the server start the conversation:
-  it dials out to a relay, and the phone meets it there.
+  Arjun's ISP drops any incoming packet that nobody asked for. But it lets
+  replies in. If it did not, he could not browse the web at all. So let the
+  server start the conversation. It dials out to a relay (a computer on the
+  internet that passes packets along), and the phone meets it there.
 guided:
   brief: >-
-    Install the mesh VPN on both the server and the phone, by joining each to the
-    mesh. Each device then gets a mesh address. Point the phone at the server's
-    mesh address and press Run. Watch the first two legs: both devices dial out
-    before anything comes in.
+    Join the server and the phone to the mesh VPN. Each device then gets a mesh
+    address. Set the phone to dial the server's mesh address, then press Run.
+    Watch the first two steps: both devices dial out before anything comes in.
   hints:
     - Tap the server and join it to the mesh. Do the same on the phone.
     - A mesh address only means something to devices that have joined. Dial "The server's mesh address".
@@ -22,7 +22,7 @@ challenge:
     Reach Jellyfin from the phone on a line behind carrier NAT, ten minutes after
     the server last sent anything. You cannot change the ISP.
   hints:
-    - Inbound is blocked, outbound is not. Which side can start the connection?
+    - Incoming is blocked. Outgoing is not. Which side can start the connection?
 layout:
   wide: { phone: [0, 140], mobile: [190, 140], internet: [380, 140], whatismyip: [380, 280], isp: [570, 140], home-router: [760, 140], server: [950, 140], relay: [380, 0] }
   narrow: { phone: [0, 0], mobile: [0, 84], internet: [0, 168], whatismyip: [185, 210], isp: [0, 252], home-router: [0, 336], server: [0, 420], relay: [185, 126] }
@@ -41,17 +41,17 @@ goals:
     check: { kind: delivered, attempt: open-jellyfin, to: server }
 debrief:
   did: >-
-    Both devices dialled out to a relay. Each outbound packet left a mapping in
-    every translator it crossed, and the mesh kept those mappings alive by
-    sending a small packet every 25 seconds. The phone's traffic then rode back
-    in along the server's own mapping. Nobody opened a port.
+    Both devices dialled out to a relay. Each outgoing packet left a row in
+    every NAT it passed. The mesh kept those rows alive by sending a small
+    packet every 25 seconds. The phone's traffic then came back in along the
+    server's own row. Nobody opened a port.
   concept: cgnat-mapping-created
   real_line: >-
     Mesh VPNs such as Tailscale, ZeroTier and NetBird work this way. Install
-    one on the server and on your phone and sign in to the same account. Check
-    each project's current terms and limits yourself. In this model traffic
-    always goes through the relay. Real ones often manage a direct path, which
-    is faster.
+    one on the server and on your phone. Sign in to the same account on both.
+    Check each project's current terms and limits yourself. In this model,
+    traffic always goes through the relay. Real mesh VPNs often find a direct
+    path, which is faster.
 world:
   nodes:
     - kind: host

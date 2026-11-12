@@ -1,15 +1,17 @@
 ## What happened
 
-The result depends on whether this line has its own public address, and we don't have data for that. So the answer here is "unknown", not a guess.
+The result depends on one fact: does this line have its own public address? We have no data for that. So the answer here is "unknown". We do not guess.
 
 ## The concept
 
-Whether a home line gets a public address or sits behind carrier NAT varies by ISP, by plan, by city and over time. Two neighbours on the same ISP can differ. A simulator that guessed would teach you something false about your own line.
+A home line either gets its own public address or sits behind carrier NAT. Which one you get depends on the ISP, the plan, the city and the date. Two neighbours on the same ISP can get different answers. If the simulator guessed, it could teach you something false about your own line.
 
 ## How to fix it
 
-Run the line check. It takes two minutes, and your own answer always beats our data. The app stores only the outcome, on your device.
+Run the line check. It takes two minutes. Your own answer is always better than our data. The app stores only the result, and only on your device.
 
 ## On a real line
 
-Compare the WAN address on your router's admin page with the address a "what is my IP" site shows. Same means public. Different means there is a NAT in between.
+1. Find the WAN address on your router's admin page.
+2. Find the address a "what is my IP" site shows.
+3. Compare them. Same means your line has a public address. Different means there is a NAT in between.

@@ -9,9 +9,9 @@ scenario: >-
   own public address, so one rule on the router is enough.
 guided:
   brief: >-
-    Add a port forward on the home router. It tells the router: "when something
-    arrives on this port, pass it to this machine". Jellyfin listens on TCP port
-    8096 on the server at 192.168.1.20. Then press Run.
+    Add a port forward on the home router. A port forward tells the router:
+    "when something arrives on this port, pass it to this machine". Jellyfin
+    listens on TCP port 8096 on the server at 192.168.1.20. Then press Run.
   hints:
     - Tap the home router and add a port forward. External port 8096, TCP.
     - Send it to 192.168.1.20, internal port 8096. Check the server's address by tapping it.
@@ -40,16 +40,16 @@ goals:
     check: { kind: delivered, attempt: open-jellyfin, to: server }
 debrief:
   did: >-
-    You added a port forward, and the router rewrote the packet's destination
-    from the public address to the server's 192.168 address. The reply went back
-    the same way. This is the classic way to host something at home, and it only
-    works because this line has a public address.
+    You added a port forward. The router changed the packet's destination from
+    the public address to the server's 192.168 address. The reply went back the
+    same way. This is the classic way to host something at home. It works only
+    because this line has a public address.
   concept: port-forward-hit
   real_line: >-
     A forwarded port is open to everyone on the internet, not just you. On a real
-    line, forward only what you must, keep that software updated, and prefer a
-    VPN for anything private. And check your line first: on many Indian
-    connections this does not work at all. That is the next mission.
+    line, forward only what you must. Keep that software updated. Use a VPN for
+    anything private. And check your line first: on many Indian connections,
+    port forwarding does not work at all. That is the next mission.
 world:
   nodes:
     - kind: host

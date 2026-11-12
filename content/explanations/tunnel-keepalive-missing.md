@@ -1,14 +1,16 @@
 ## What happened
 
-This end of the tunnel is behind NAT and has no keepalive set. Once the tunnel goes quiet, the NAT forgets it and nothing can reach this device through the tunnel until it speaks again.
+This end of the tunnel is behind NAT, and it has no keepalive set. When the tunnel goes quiet, the NAT forgets it. Then nothing can reach this device through the tunnel until the device sends something again.
 
 ## The concept
 
-WireGuard is silent by design: it sends nothing when there is nothing to send. That is good for battery and bad behind a NAT, because the NAT only keeps the path open while packets flow.
+WireGuard is silent by design. It sends nothing when there is nothing to send. That saves battery. But behind a NAT it is a problem, because the NAT keeps the path open only while packets flow.
+
+A **keepalive** is a tiny packet sent at regular times to keep the path open.
 
 ## How to fix it
 
-Add `PersistentKeepalive = 25` to the `[Peer]` section on the device that is behind NAT.
+On the device that is behind NAT, add `PersistentKeepalive = 25` to the `[Peer]` section.
 
 ## On a real line
 

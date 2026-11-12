@@ -9,18 +9,18 @@ scenario: >-
   his router looks wrong.
 guided:
   brief: >-
-    The port forward is already in place. Press Run and watch where the packet
-    stops. Then tap the boxes and compare addresses. Answer both questions to
-    finish. You cannot make this connection work in this mission, and that is
+    The port forward is already set up. Press Run and watch where the packet
+    stops. Then tap the boxes and compare their addresses. Answer both questions
+    to finish. You cannot make this connection work in this mission. That is
     the lesson.
   hints:
     - Watch the step log. The packet never reaches the home router.
-    - Tap the home router. Its WAN address starts with 100.64. That range is reserved for use inside an ISP. It is not a public address.
+    - Tap the home router. Its WAN address starts with 100.64. That range is set aside for use inside an ISP. It is not a public address.
     - Run "Ask a what-is-my-IP site from the server". The site sees a different address, one that the ISP shares between many customers.
 challenge:
   brief: >-
-    The forward is correct and the connection still fails. Find the node that
-    stops it, and say what kind of line this is.
+    The forward is correct, but the connection still fails. Find the box that
+    stops it. Then say what kind of line this is.
   hints:
     - Compare the router's WAN address with the address a website sees.
 layout:
@@ -56,7 +56,7 @@ questions:
       Is the address the site saw the same as the home router's WAN address?
     options:
       - { value: same, label: "Same. This line has its own public address" }
-      - { value: different, label: "Different. Something upstream is sharing an address" }
+      - { value: different, label: "Different. Something between the router and the internet is sharing an address" }
       - { value: cant-tell, label: "I can't tell" }
     check: { kind: line_type, isp: isp }
 goals:
@@ -68,18 +68,18 @@ goals:
     check: { kind: answer, question: line-type }
 debrief:
   did: >-
-    You found a second translator, inside the ISP, that Arjun cannot see or
-    configure. His router's WAN address is not public. The ISP shares one public
-    address between many homes and only lets replies back in. A port forward on
-    his router never gets the chance to act, because the packet is dropped one
-    hop earlier.
+    You found a second NAT, inside the ISP. Arjun cannot see it or change it.
+    His router's WAN address is not public. The ISP shares one public address
+    between many homes, and it only lets replies back in. The port forward on
+    his router never gets a chance to work, because the packet is dropped one
+    step earlier.
   concept: cgnat-no-inbound-mapping
   real_line: >-
-    If your router's WAN address starts with 100.64 to 100.127, or with 10., or
-    differs from what a "what is my IP" site shows, you are behind carrier NAT.
-    Port forwarding, DMZ and UPnP will not help. Your options are the next
-    missions: dial out with a mesh VPN or a tunnel, use IPv6, or ask the ISP
-    whether a public address is available.
+    You are behind carrier NAT if your router's WAN address starts with 100.64
+    to 100.127, or with 10., or is different from what a "what is my IP" site
+    shows. Then port forwarding, DMZ and UPnP will not help. Your options are in
+    the next missions: dial out with a mesh VPN or a tunnel, use IPv6, or ask
+    the ISP whether a public address is available.
 world:
   nodes:
     - kind: host

@@ -1,19 +1,19 @@
 ## What happened
 
-A port forward now sends anyone on the internet who dials your public address and this port straight to the service.
+A port forward now sends anyone on the internet straight to the service, if they dial your public address and this port.
 
 ## The concept
 
-A port forward has no idea who is calling. It opens the door for you on your phone and equally for automated scanners, which sweep the whole IPv4 internet for open ports every day.
+A port forward does not know who is calling. It opens the door for you on your phone. It opens it just as wide for automated scanners. Scanners check the whole IPv4 internet for open ports every day.
 
 ## Why it matters
 
-The only things between a stranger and your data are the service's own login and how up to date it is.
+Only two things stand between a stranger and your data: the service's own login, and how up to date the service is.
 
 ## How to fix it
 
-- Reach private services through a VPN and forward nothing.
-- If you must forward, keep the service patched, use a strong password, and forward only that one port.
+- Best: reach private services through a VPN, and forward nothing.
+- If you must forward: keep the service updated, use a strong password, and forward only that one port.
 
 ## On a real line
 

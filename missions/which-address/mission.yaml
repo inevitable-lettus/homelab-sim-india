@@ -9,10 +9,11 @@ scenario: >-
   address should her phone even dial?
 guided:
   brief: >-
-    Every device at home has more than one address, depending on who is asking.
+    A home has more than one address. Which one works depends on who is asking.
     Tap each box on the board to see its addresses. Pick the address the phone
-    should dial, then press Run. You are done when the phone's packet arrives at
-    the home router, and you have answered the question about the line.
+    should dial, then press Run. You are done when both are true: the phone's
+    packet arrives at the home router, and you have answered the question about
+    the line.
   hints:
     - Addresses that start with 192.168. only mean something inside one home. Millions of homes use the same ones.
     - The phone is outside the home. It needs the address the rest of the internet uses for this home.
@@ -42,7 +43,7 @@ questions:
       Is the address the site saw the same as the home router's WAN address?
     options:
       - { value: same, label: "Same. This line has its own public address" }
-      - { value: different, label: "Different. Something upstream is sharing an address" }
+      - { value: different, label: "Different. Something between the router and the internet is sharing an address" }
       - { value: cant-tell, label: "I can't tell" }
     check: { kind: line_type, isp: isp }
 goals:
@@ -55,14 +56,15 @@ goals:
 debrief:
   did: >-
     You found that one home has three kinds of address. The server's 192.168
-    address works only inside the home. The router's WAN address is what the ISP
-    gave it. The public address is what the rest of the internet sees. On this
-    line the last two are the same, so the phone's packet reached the router.
+    address works only inside the home. The router's WAN address is the address
+    the ISP gave the router. The public address is what the rest of the internet
+    sees. On this line, the last two are the same, so the phone's packet reached
+    the router.
   concept: three-addresses
   real_line: >-
     Open your router's admin page and find the WAN or Internet IP address. Then
     open any "what is my IP" site. If the two match, your line has a public
-    address. If they differ, read Mission 3 before you try anything else.
+    address. If they are different, read Mission 3 before you try anything else.
 world:
   nodes:
     - kind: host

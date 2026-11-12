@@ -12,13 +12,13 @@ guided:
     Write /root/wg0.conf for the home server, and give the hub the server's
     public key. The hub is at 192.0.2.50, port 51820. The tunnel network is
     10.8.0.0/24: the hub is 10.8.0.1, the server is 10.8.0.2 and the phone is
-    10.8.0.3. Make a key pair, fill in the file, save the public key in
-    /root/publickey, then press Check my files and Run.
+    10.8.0.3. Steps: (1) make a key pair, (2) fill in the file, (3) save the
+    public key in /root/publickey, (4) press Check my files, then Run.
   hints:
     - Make a key pair first. The private key goes in the config. The public key goes in /root/publickey.
     - The server sits behind carrier NAT, so it must dial the hub. Endpoint is the hub's address and port, written as 192.0.2.50:51820.
     - AllowedIPs says which tunnel addresses may come from this peer. The phone's packets arrive through the hub, so allow the whole tunnel network.
-    - If it works at first and fails ten minutes later, nothing is keeping the NAT mappings alive. Add PersistentKeepalive, shorter than the shortest NAT timeout on the path.
+    - If it works at first and fails ten minutes later, nothing is keeping the NAT rows alive. Add PersistentKeepalive. Set it shorter than the shortest NAT timeout on the path.
 challenge:
   brief: >-
     Reach Jellyfin on the home server from the phone, through the hub at
@@ -70,16 +70,16 @@ debrief:
   did: >-
     You wrote by hand what the mesh VPN set up for you. The server dialled the
     hub, because nothing can dial the server. The hub knew the server by its
-    public key, and learned where to find it from that first packet. A small
-    packet every few seconds kept every NAT mapping on the path alive, so the
-    phone's traffic could ride back in ten minutes later.
+    public key. It learned where to find the server from that first packet. A
+    small packet every few seconds kept every NAT row on the path alive. So the
+    phone's traffic could still come back in ten minutes later.
   concept: tunnel-keepalive-missing
   real_line: >-
-    This needs a server with a public address, which usually means renting
-    one. On the hub you would add the server's public key as a peer and turn
-    on IP forwarding. On the home server, the file lives at
-    /etc/wireguard/wg0.conf and `wg-quick up wg0` brings it up. Keep the
-    private key on the server only.
+    This needs a server with a public address. That usually means renting one.
+    On the hub, you would add the server's public key as a peer and turn on IP
+    forwarding. On the home server, the file goes in /etc/wireguard/wg0.conf,
+    and `wg-quick up wg0` starts the tunnel. Keep the private key on the server
+    only.
 world:
   nodes:
     - kind: host
