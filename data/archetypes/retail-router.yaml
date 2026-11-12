@@ -1,0 +1,14 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: retail-router
+kind: archetype
+category: router
+label: Router you bought and control
+network: { wifi: wifi6 }
+power: { idle_w: 8 }
+router:
+  lan: [{ speed_mbps: 1000 }, { speed_mbps: 1000 }, { speed_mbps: 1000 }, { speed_mbps: 1000 }]
+  admin: full
+  port_forwarding: true
+  lan_dns_setting: true
+  dhcp_can_disable: true
+  dhcp_reservation: true

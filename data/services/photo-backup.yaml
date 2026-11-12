@@ -1,0 +1,14 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: photo-backup
+label: Photo backup
+teaching: true
+category: photos
+install:
+  - { method: container, os_families: [linux], arches: [x86_64, aarch64], runtime_needed: true }
+ram_min_mb: 4096
+ram_rec_mb: 6144
+storage_min_gb: 10
+ports: [{ proto: tcp, port: 2283, purpose: web }]
+needs: { host_network_for: [], static_lan_ip: false }
+provides: [photo_backup]
+paid_features: []

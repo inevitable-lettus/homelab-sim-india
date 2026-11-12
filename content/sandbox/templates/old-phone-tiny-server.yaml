@@ -1,0 +1,37 @@
+# A starting point for the sandbox. Every part is a teaching model.
+id: old-phone-tiny-server
+title: Old phone as a tiny server
+summary: "An Android phone with a terminal app: what runs on it, what does not, and what always charging does to it."
+world:
+  nodes:
+    - { kind: internet, id: internet, label: Internet }
+    - { kind: isp, id: mobile-network, label: Mobile network, ipv4: cgnat, public_pool: "198.51.100.0/24", cgnat_pool: "100.72.5.0/24", udp_timeout_s: 30 }
+    - { kind: host, id: away-phone, label: "Your phone, away from home", role: client, device: phone-client }
+    - { kind: isp, id: home-isp, label: Home ISP, ipv4: cgnat, public_pool: "203.0.113.0/24", udp_timeout_s: 60, cgnat_pool: "100.64.9.0/24" }
+    - { kind: router, id: router, label: Home router, device: retail-router, lan: "192.168.1.0/24", udp_timeout_s: 120 }
+    - { kind: host, id: server, label: Old phone, device: old-android-phone, os: android-terminal, services: [{ id: sync, label: File sync, proto: tcp, port: 22000, app: file-sync }, { id: dns, label: Ad-blocking DNS, proto: udp, port: 53, app: dns-adblocker }] }
+  links:
+    - { id: phone-mobile, a: away-phone, b: mobile-network, medium: cellular, length_m: 2000, rate_ab_bps: 8000000, rate_ba_bps: 20000000 }
+    - { id: mobile-internet, a: mobile-network, b: internet, medium: backbone, length_m: 840000, rate_ab_bps: 10000000000, rate_ba_bps: 10000000000 }
+    - { id: isp-internet, a: home-isp, b: internet, medium: backbone, length_m: 120000, rate_ab_bps: 10000000000, rate_ba_bps: 10000000000 }
+    - { id: home-isp-line, a: router, b: home-isp, medium: fibre, length_m: 8000, rate_ab_bps: 50000000, rate_ba_bps: 100000000 }
+    - { id: server-router, a: server, b: router, medium: wifi, length_m: 6, rate_ab_bps: 100000000, rate_ba_bps: 100000000 }
+  home: { tariff: teaching-slabs, outage: evening-2h }
+  intents:
+    - { kind: run, id: run-sync, host: server, service: sync }
+    - { kind: run, id: run-dns, host: server, service: dns }
+layout:
+  wide:
+    away-phone: [0, 140]
+    mobile-network: [190, 140]
+    internet: [380, 140]
+    home-isp: [570, 140]
+    router: [760, 140]
+    server: [950, 140]
+  narrow:
+    away-phone: [0, 0]
+    mobile-network: [0, 84]
+    internet: [0, 168]
+    home-isp: [0, 252]
+    router: [0, 336]
+    server: [0, 420]

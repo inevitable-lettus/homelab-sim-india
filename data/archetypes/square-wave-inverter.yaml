@@ -1,0 +1,6 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: square-wave-inverter
+kind: archetype
+category: inverter
+label: Home inverter with a square-wave output
+ups: { topology: inverter, va: 900, max_w: 700, battery_external: true, waveform: square }

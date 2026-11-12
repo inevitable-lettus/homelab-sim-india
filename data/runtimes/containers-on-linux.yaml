@@ -1,0 +1,8 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: containers-on-linux
+label: Containers on Linux
+teaching: true
+os_families: [linux]
+via_vm: false
+host_network: "yes"
+device_passthrough: [vaapi, qsv, v4l2m2m]

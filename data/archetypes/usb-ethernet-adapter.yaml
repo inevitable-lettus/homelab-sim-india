@@ -1,0 +1,6 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: usb-ethernet-adapter
+kind: archetype
+category: usb_nic
+label: USB Ethernet adapter
+adapter: { host_side: usb5_a, provides: { nic: [{ speed_mbps: 1000 }] } }

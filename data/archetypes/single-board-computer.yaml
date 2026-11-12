@@ -1,4 +1,4 @@
-# A generic teaching machine. Not a product.
+# A generic teaching model. Not a product, and no claim about any product.
 id: single-board-computer
 kind: archetype
 category: computer
@@ -8,6 +8,11 @@ compute:
   arch: aarch64
   ram_gb: 4
   virtualization: false
-network:
-  nic: [{ speed_mbps: 1000 }]
+  firmware: uboot
+  cooling: fanless
+  ac_power_recovery: true
+  video: { apis: [v4l2m2m], encode: { h264: true } }
+network: { nic: [{ speed_mbps: 1000 }], wifi: wifi5 }
+ports: { usb: [{ kind: usb2_a, count: 2 }, { kind: usb5_a, count: 2 }] }
+storage: { bays: [{ interface: sd_card, count: 1 }], soldered_gb: 0, boot_from_usb: true }
 power: { idle_w: 3, load_w: 7 }

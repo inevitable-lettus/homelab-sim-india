@@ -1,0 +1,43 @@
+# A starting point for the sandbox. Every part is a teaching model.
+id: mini-pc-proxmox
+title: Mini PC with a hypervisor
+summary: "One small PC split into a VM and a container, and the memory that takes."
+world:
+  nodes:
+    - { kind: internet, id: internet, label: Internet }
+    - { kind: isp, id: mobile-network, label: Mobile network, ipv4: cgnat, public_pool: "198.51.100.0/24", cgnat_pool: "100.72.5.0/24", udp_timeout_s: 30 }
+    - { kind: host, id: away-phone, label: "Your phone, away from home", role: client, device: phone-client }
+    - { kind: isp, id: home-isp, label: Home ISP, ipv4: public, public_pool: "203.0.113.0/24", udp_timeout_s: 60 }
+    - { kind: router, id: router, label: Home router, device: retail-router, lan: "192.168.1.0/24", udp_timeout_s: 120 }
+    - { kind: host, id: server, label: Mini PC, device: single-nic-mini-pc, os: hypervisor, parts: [{ id: disk, pack: nvme-500gb }], settings: { ac_power_recovery: true } }
+    - { kind: host, id: media-vm, label: Media VM, runs_on: server, guest: vm, os: linux-server, alloc: { ram_mb: 4096, disk_gb: 64 }, services: [{ id: media, label: Media server, proto: tcp, port: 8096, app: media-server }] }
+    - { kind: host, id: dns-ct, label: DNS container, runs_on: server, guest: lxc, alloc: { ram_mb: 512, disk_gb: 4 }, services: [{ id: dns, label: Ad-blocking DNS, proto: udp, port: 53, app: dns-adblocker }] }
+  links:
+    - { id: phone-mobile, a: away-phone, b: mobile-network, medium: cellular, length_m: 2000, rate_ab_bps: 8000000, rate_ba_bps: 20000000 }
+    - { id: mobile-internet, a: mobile-network, b: internet, medium: backbone, length_m: 840000, rate_ab_bps: 10000000000, rate_ba_bps: 10000000000 }
+    - { id: isp-internet, a: home-isp, b: internet, medium: backbone, length_m: 120000, rate_ab_bps: 10000000000, rate_ba_bps: 10000000000 }
+    - { id: home-isp-line, a: router, b: home-isp, medium: fibre, length_m: 8000, rate_ab_bps: 50000000, rate_ba_bps: 100000000 }
+    - { id: server-router, a: server, b: router, medium: ethernet, length_m: 5, rate_ab_bps: 1000000000, rate_ba_bps: 1000000000 }
+  home: { tariff: teaching-slabs, outage: evening-2h }
+  intents:
+    - { kind: run, id: run-media, host: media-vm, service: media }
+    - { kind: run, id: run-dns, host: dns-ct, service: dns }
+layout:
+  wide:
+    away-phone: [0, 140]
+    mobile-network: [190, 140]
+    internet: [380, 140]
+    home-isp: [570, 140]
+    router: [760, 140]
+    server: [950, 140]
+    media-vm: [950, 300]
+    dns-ct: [1140, 300]
+  narrow:
+    away-phone: [0, 0]
+    mobile-network: [0, 84]
+    internet: [0, 168]
+    home-isp: [0, 252]
+    router: [0, 336]
+    server: [0, 420]
+    media-vm: [0, 504]
+    dns-ct: [0, 588]

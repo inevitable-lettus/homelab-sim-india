@@ -1,0 +1,11 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: linux-server
+label: Linux server
+kind: os
+teaching: true
+family: linux
+arches: [x86_64, aarch64]
+firmware: [uefi, bios, uefi_and_bios, uboot]
+requires: { virtualization: false, ram_min_mb: 512, storage_min_gb: 8, wired_nic: false }
+base_ram_mb: 300
+provides: { vms: true, lxc: true }

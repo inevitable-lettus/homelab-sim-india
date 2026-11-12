@@ -1,0 +1,7 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: hdd-4tb
+kind: archetype
+category: drive
+label: "3.5 inch hard drive, 4 TB"
+drive: { interface: sata_3_5, medium: hdd, capacity_gb: 4000, needs_12v: true }
+power: { idle_w: 5 }

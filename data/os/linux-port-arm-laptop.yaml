@@ -1,0 +1,12 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: linux-port-arm-laptop
+label: Community Linux port for the ARM laptop
+kind: os
+teaching: true
+family: linux
+arches: [aarch64]
+firmware: [apple_silicon]
+listed_devices_only: true
+requires: { virtualization: false, ram_min_mb: 1024, storage_min_gb: 16, wired_nic: false }
+base_ram_mb: 400
+provides: { vms: true, lxc: true }

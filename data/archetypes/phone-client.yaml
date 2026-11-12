@@ -1,0 +1,9 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: phone-client
+kind: archetype
+category: client
+label: Phone
+network: { wifi: wifi6 }
+client:
+  plays: { h264: true, hevc_8: true, hevc_10: true, av1: false }
+  apps: [media-server, photo-backup, file-sync]

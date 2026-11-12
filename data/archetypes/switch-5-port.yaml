@@ -1,0 +1,13 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: switch-5-port
+kind: archetype
+category: switch
+label: Five-port switch
+network:
+  nic:
+    - { speed_mbps: 1000 }
+    - { speed_mbps: 1000 }
+    - { speed_mbps: 1000 }
+    - { speed_mbps: 1000 }
+    - { speed_mbps: 1000 }
+power: { idle_w: 3 }

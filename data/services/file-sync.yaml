@@ -1,0 +1,15 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: file-sync
+label: File sync
+teaching: true
+category: sync
+install:
+  - { method: native, os_families: [linux, android], arches: [x86_64, aarch64] }
+  - { method: container, os_families: [linux], arches: [x86_64, aarch64], runtime_needed: true }
+ram_min_mb: 128
+ram_rec_mb: 512
+storage_min_gb: 1
+ports: [{ proto: tcp, port: 22000, purpose: sync }]
+needs: { host_network_for: [], static_lan_ip: false }
+provides: [file_share]
+paid_features: []

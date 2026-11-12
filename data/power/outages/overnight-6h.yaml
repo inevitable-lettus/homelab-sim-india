@@ -1,0 +1,6 @@
+# A teaching preset. Not a measurement of any place.
+id: overnight-6h
+label: "Overnight, 6 hours"
+kind: teaching
+duration_min: 360
+per_day: 1

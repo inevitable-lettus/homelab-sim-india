@@ -1,0 +1,7 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: smart-tv
+kind: archetype
+category: client
+label: Smart TV
+network: { wifi: wifi5 }
+client: { plays: { h264: true, hevc_8: true, hevc_10: false, av1: false }, apps: [media-server] }

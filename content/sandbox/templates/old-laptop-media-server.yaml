@@ -1,0 +1,43 @@
+# A starting point for the sandbox. Every part is a teaching model.
+id: old-laptop-media-server
+title: Old laptop as a media server
+summary: "A laptop you already own, a media server, and watching from your phone on mobile data."
+world:
+  nodes:
+    - { kind: internet, id: internet, label: Internet }
+    - { kind: isp, id: mobile-network, label: Mobile network, ipv4: cgnat, public_pool: "198.51.100.0/24", cgnat_pool: "100.72.5.0/24", udp_timeout_s: 30 }
+    - { kind: host, id: away-phone, label: "Your phone, away from home", role: client, device: phone-client }
+    - { kind: isp, id: home-isp, label: Home ISP, ipv4: cgnat, public_pool: "203.0.113.0/24", udp_timeout_s: 60, cgnat_pool: "100.64.9.0/24" }
+    - { kind: router, id: router, label: Home router, device: retail-router, lan: "192.168.1.0/24", udp_timeout_s: 120, port_forwards: [{ id: media, proto: tcp, external_port: 8096, to_ip: "192.168.1.20", internal_port: 8096 }] }
+    - { kind: host, id: server, label: Old laptop, device: old-laptop, os: linux-server, services: [{ id: media, label: Media server, proto: tcp, port: 8096, app: media-server }], parts: [{ id: disk, pack: ssd-500gb }] }
+    - { kind: host, id: tv, label: TV, role: client, device: smart-tv }
+  links:
+    - { id: phone-mobile, a: away-phone, b: mobile-network, medium: cellular, length_m: 2000, rate_ab_bps: 8000000, rate_ba_bps: 20000000 }
+    - { id: mobile-internet, a: mobile-network, b: internet, medium: backbone, length_m: 840000, rate_ab_bps: 10000000000, rate_ba_bps: 10000000000 }
+    - { id: isp-internet, a: home-isp, b: internet, medium: backbone, length_m: 120000, rate_ab_bps: 10000000000, rate_ba_bps: 10000000000 }
+    - { id: home-isp-line, a: router, b: home-isp, medium: fibre, length_m: 8000, rate_ab_bps: 50000000, rate_ba_bps: 100000000 }
+    - { id: server-router, a: server, b: router, medium: ethernet, length_m: 5, rate_ab_bps: 1000000000, rate_ba_bps: 1000000000 }
+    - { id: tv-router, a: tv, b: router, medium: wifi, length_m: 6, rate_ab_bps: 100000000, rate_ba_bps: 100000000 }
+  home: { tariff: teaching-slabs, outage: evening-2h }
+  intents:
+    - { kind: run, id: run-media, host: server, service: media }
+    - { kind: stream, id: watch-on-tv, client: tv, host: server, service: media, format: hevc_2160p_10bit }
+    - { kind: stream, id: watch-away, client: away-phone, host: server, service: media, format: h264_1080p, via: { kind: public_of, node: router } }
+    - { kind: survive_outage, id: power-cut, outage: evening-2h, keep: [run-media] }
+layout:
+  wide:
+    away-phone: [0, 140]
+    mobile-network: [190, 140]
+    internet: [380, 140]
+    home-isp: [570, 140]
+    router: [760, 140]
+    server: [950, 140]
+    tv: [760, 300]
+  narrow:
+    away-phone: [0, 0]
+    mobile-network: [0, 84]
+    internet: [0, 168]
+    home-isp: [0, 252]
+    router: [0, 336]
+    server: [0, 420]
+    tv: [0, 504]

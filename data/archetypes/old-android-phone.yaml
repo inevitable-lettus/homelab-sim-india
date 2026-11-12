@@ -1,0 +1,20 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: old-android-phone
+kind: archetype
+category: computer
+label: Old Android phone
+form: phone
+compute:
+  arch: aarch64
+  ram_gb: 4
+  virtualization: false
+  firmware: android_bootloader
+  cooling: fanless
+  ac_power_recovery: false
+  video: { apis: [] }
+network: { nic: [], wifi: wifi5 }
+ports: { usb: [{ kind: usb5_c, count: 1 }] }
+storage: { bays: [], soldered_gb: 64, boot_from_usb: false }
+power: { idle_w: 1, load_w: 4 }
+battery: { wh: 15 }
+os_support: { android-terminal: { level: full, lid_closed: unknown, charge_limit: unknown } }

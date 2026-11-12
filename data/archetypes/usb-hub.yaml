@@ -1,0 +1,6 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: usb-hub
+kind: archetype
+category: usb_hub
+label: USB hub
+adapter: { host_side: usb5_a, provides: { usb: [{ kind: usb5_a, count: 4 }] }, needs_power: false }

@@ -1,0 +1,6 @@
+# A teaching preset. Not a measurement of any place.
+id: evening-2h
+label: "Evening cut, 2 hours"
+kind: teaching
+duration_min: 120
+per_day: 1

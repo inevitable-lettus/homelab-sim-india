@@ -1,0 +1,18 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: media-server
+label: Media server
+teaching: true
+category: media
+install:
+  - { method: native, os_families: [linux], arches: [x86_64, aarch64] }
+  - { method: container, os_families: [linux], arches: [x86_64, aarch64], runtime_needed: true }
+ram_min_mb: 1024
+ram_rec_mb: 2048
+storage_min_gb: 2
+ports: [{ proto: tcp, port: 8096, purpose: web }]
+needs:
+  host_network_for: []
+  static_lan_ip: false
+  transcode_apis: { linux: [vaapi, qsv, v4l2m2m] }
+provides: [media_server]
+paid_features: []

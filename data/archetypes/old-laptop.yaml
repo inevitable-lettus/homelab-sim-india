@@ -1,4 +1,4 @@
-# A generic teaching machine. Not a product.
+# A generic teaching model. Not a product, and no claim about any product.
 id: old-laptop
 kind: archetype
 category: computer
@@ -8,6 +8,13 @@ compute:
   arch: x86_64
   ram_gb: 8
   virtualization: true
-network:
-  nic: [{ speed_mbps: 1000 }]
+  nested_virtualization: false
+  firmware: uefi
+  cooling: fan
+  ac_power_recovery: false
+  video: { apis: [vaapi, qsv], encode: { h264: true, hevc_8: true } }
+network: { nic: [{ speed_mbps: 1000 }], wifi: wifi5 }
+ports: { usb: [{ kind: usb5_a, count: 2 }] }
+storage: { bays: [{ interface: sata_2_5, count: 1 }], soldered_gb: 0, boot_from_usb: true }
 power: { idle_w: 12, load_w: 45 }
+battery: { wh: 40 }

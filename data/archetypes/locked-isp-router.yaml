@@ -1,0 +1,14 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: locked-isp-router
+kind: archetype
+category: router
+label: ISP router with a locked admin page
+network: { wifi: wifi5 }
+power: { idle_w: 8 }
+router:
+  lan: [{ speed_mbps: 1000 }, { speed_mbps: 1000 }, { speed_mbps: 1000 }, { speed_mbps: 1000 }]
+  admin: isp_only
+  port_forwarding: false
+  lan_dns_setting: false
+  dhcp_can_disable: false
+  dhcp_reservation: false

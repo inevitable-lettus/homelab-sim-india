@@ -1,0 +1,12 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: ups-600va
+kind: archetype
+category: ups
+label: Small 600 VA UPS
+ups:
+  topology: line_interactive
+  va: 600
+  max_w: 360
+  battery_wh: 84
+  waveform: stepped_sine
+  outlets: 3

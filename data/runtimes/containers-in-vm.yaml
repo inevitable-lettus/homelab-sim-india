@@ -1,0 +1,9 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: containers-in-vm
+label: Containers inside a hidden Linux VM
+teaching: true
+os_families: [macos, windows]
+via_vm: true
+vm_overhead_mb: 2048
+host_network: limited
+device_passthrough: []

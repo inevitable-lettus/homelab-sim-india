@@ -1,0 +1,11 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: desktop-os-arm
+label: Desktop system the ARM laptop ships with
+kind: os
+teaching: true
+family: macos
+arches: [aarch64]
+firmware: [apple_silicon]
+requires: { virtualization: false, ram_min_mb: 4096, storage_min_gb: 64, wired_nic: false }
+base_ram_mb: 3000
+provides: { vms: true, lxc: false, vm_accelerated_arches: [aarch64] }

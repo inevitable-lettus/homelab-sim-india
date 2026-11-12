@@ -1,0 +1,12 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: android-terminal
+label: Android with a terminal app
+kind: os
+teaching: true
+family: android
+arches: [aarch64]
+firmware: [android_bootloader]
+listed_devices_only: true
+requires: { virtualization: false, ram_min_mb: 1024, storage_min_gb: 8, wired_nic: false }
+base_ram_mb: 1500
+provides: { vms: false, lxc: false }

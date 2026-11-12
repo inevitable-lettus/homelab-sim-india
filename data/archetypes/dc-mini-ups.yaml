@@ -1,0 +1,6 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: dc-mini-ups
+kind: archetype
+category: dc_ups
+label: DC mini UPS for a router
+ups: { topology: dc, max_w: 25, battery_wh: 30, waveform: sine, outlets: 1 }

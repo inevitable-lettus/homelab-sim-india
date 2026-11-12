@@ -1,0 +1,13 @@
+# A made-up tariff for teaching. It is not any state or DISCOM.
+id: teaching-free-units
+teaching: true
+state: Teaching
+discom: Teaching tariff with free units
+category: LT domestic
+effective_from: "2026-04-01"
+slabs: [{ upto_kwh: 200, paise_per_kwh: 400 }, { paise_per_kwh: 700 }]
+fixed_paise_per_month: 0
+duty_permille: 50
+free_units:
+  upto_kwh: 200
+  condition: A scheme that makes the first 200 units free for households that qualify

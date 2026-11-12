@@ -1,0 +1,10 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: enclosure-3-5-powered
+kind: archetype
+category: enclosure
+label: Powered USB enclosure for a 3.5 inch drive
+adapter:
+  host_side: usb5_a
+  provides: { bays: [{ interface: sata_3_5, count: 1 }] }
+  uas: true
+  needs_power: true

@@ -1,0 +1,4 @@
+# Teaching bit rates for common video formats. Typical figures, not measurements.
+h264_1080p: { label: "1080p H.264", codec: h264, kbps: 8000, teaching: true }
+hevc_1080p: { label: "1080p HEVC", codec: hevc_8, kbps: 5000, teaching: true }
+hevc_2160p_10bit: { label: "4K HEVC 10-bit", codec: hevc_10, kbps: 25000, teaching: true }

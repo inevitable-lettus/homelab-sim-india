@@ -1,0 +1,7 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: nvme-500gb
+kind: archetype
+category: drive
+label: "NVMe SSD, 500 GB"
+drive: { interface: m2_nvme, medium: ssd, capacity_gb: 500, needs_12v: false }
+power: { idle_w: 1 }

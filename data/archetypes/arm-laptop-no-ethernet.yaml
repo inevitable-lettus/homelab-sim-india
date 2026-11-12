@@ -1,0 +1,27 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: arm-laptop-no-ethernet
+kind: archetype
+category: computer
+label: Thin ARM laptop with no Ethernet port
+form: laptop
+compute:
+  arch: aarch64
+  ram_gb: 8
+  virtualization: true
+  nested_virtualization: false
+  firmware: apple_silicon
+  cooling: fanless
+  ac_power_recovery: false
+  video: { apis: [videotoolbox], encode: { h264: true, hevc_8: true, hevc_10: true } }
+network: { nic: [], wifi: wifi6 }
+ports: { usb: [{ kind: usb40_c, count: 2 }] }
+storage: { bays: [], soldered_gb: 256, boot_from_usb: false }
+power: { idle_w: 4, load_w: 30 }
+battery: { wh: 50 }
+os_support:
+  desktop-os-arm: { level: full, lid_closed: partial, charge_limit: true }
+  linux-port-arm-laptop:
+    level: partial
+    lid_closed: unknown
+    charge_limit: unknown
+    gaps: [Some ports and the built-in display engine may not work]

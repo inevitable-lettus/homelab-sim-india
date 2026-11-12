@@ -1,0 +1,15 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: dns-adblocker
+label: Ad-blocking DNS server
+teaching: true
+category: dns
+install:
+  - { method: native, os_families: [linux], arches: [x86_64, aarch64] }
+  - { method: container, os_families: [linux], arches: [x86_64, aarch64], runtime_needed: true }
+ram_min_mb: 256
+ram_rec_mb: 512
+storage_min_gb: 1
+ports: [{ proto: udp, port: 53, purpose: dns }]
+needs: { host_network_for: [DHCP server], static_lan_ip: true }
+provides: [dns_server, dhcp_server]
+paid_features: []

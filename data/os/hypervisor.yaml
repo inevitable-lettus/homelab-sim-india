@@ -1,0 +1,11 @@
+# A generic teaching model. Not a product, and no claim about any product.
+id: hypervisor
+label: Hypervisor
+kind: hypervisor
+teaching: true
+family: linux
+arches: [x86_64]
+firmware: [uefi, bios, uefi_and_bios]
+requires: { virtualization: true, ram_min_mb: 2048, storage_min_gb: 32, wired_nic: true }
+base_ram_mb: 1024
+provides: { vms: true, lxc: true }
