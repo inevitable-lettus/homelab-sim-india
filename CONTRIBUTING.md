@@ -12,6 +12,30 @@ Thanks for helping. Run `npm run setup` once, then `npm run check` before openin
 
 The full list is in [CLAUDE.md](CLAUDE.md) and [context-docs/Architecture.md](context-docs/Architecture.md).
 
+## Add a device in one file
+
+A device is one YAML file in `data/devices/`, named after its `id`. There is no code to change: the data build reads the file, checks it against [`schemas/device.schema.json`](schemas/device.schema.json), and the device appears in the catalog.
+
+A small, real example, a hard disk:
+
+```yaml
+id: example-4tb-hdd
+kind: device
+category: drive
+label: Example 4 TB hard disk
+drive:
+  capacity_gb: { value: 4000, source: "https://example.org/datasheet", retrieved_at: "2026-11-12" }
+```
+
+- `kind: device` is a real product, so every capability value carries its own `source` and `retrieved_at`, or is the word `unknown`. A link may not carry tracking parameters such as `utm_source`.
+- `category` is one of `computer`, `router`, `switch`, `access_point`, `ups`, `inverter`, `dc_ups`, `drive`, `enclosure`, `usb_nic`, `usb_hub` or `client`. Only the sections that belong to that category are accepted, for example `drive:` for a drive and `compute:` for a computer.
+- A generic teaching model is `kind: archetype`, with plain values and no sources. See [`data/archetypes/old-android-phone.yaml`](data/archetypes/old-android-phone.yaml) for a fuller file.
+- Anything you leave out is `unknown`, and `unknown` never passes a check.
+
+Run `npm run check`. If the file is wrong, the data build names the file and the field. `tools/data-build/tests/packs.rs` has what the build accepts and refuses, and a test that adds one file of each kind.
+
+Data is contributed under CC BY-SA 4.0, like everything in `data/`.
+
 ## Sign your commits (DCO)
 
 This project uses the [Developer Certificate of Origin](https://developercertificate.org). It means you wrote the change, or have the right to submit it under this project's licences. Sign each commit:
