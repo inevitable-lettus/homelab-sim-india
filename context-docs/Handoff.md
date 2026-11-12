@@ -4,7 +4,7 @@ Living state and build order. **Read this first in every session, and update it 
 
 ## Current status (2026-11-12)
 
-**Phase 7 is done (2026-11-12): Mission 5, Write the tunnel, is playable from a file editor and from a real Linux terminal in the browser. Next action: the owner's review, then sandbox phase S1 ([Sandbox.md](Sandbox.md) §14), stopping for review after each of S1 to S5.** Phase 6's learner test has still not been run.
+**Sandbox phases S1 to S5 are built for desktop (2026-11-12), after Phase 7 (Mission 5, Write the tunnel). Everything left is filed as GitHub issues 1 to 69: <https://github.com/inevitable-lettus/homelab-sim-india/issues>. Labels: `data`, `performance`, `sandbox`, `core`, `content`, `testing`, `owner-decision`, `roadmap`. Next action: the owner's review, then pick from the issues.** Phase 6's learner test has still not been run (issue 54). The site is over the 512 KB budget (issue 1).
 
 **Phases 0, 1, 4 and 5 are done**, with the minimum Phase 2 and 3 material they needed. Repo: <https://github.com/inevitable-lettus/homelab-sim-india>. Preview: <https://inevitable-lettus.github.io/homelab-sim-india/>. The deployed site has a landing page, the track map and Missions 1 to 4, playable on desktop and at 360px, with trace playback, a step log, findings, debriefs, concept pages, settings and local progress. Phase 1 confirmed v86 as the terminal engine and React Flow for the board.
 
