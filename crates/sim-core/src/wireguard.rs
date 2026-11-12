@@ -108,6 +108,8 @@ pub fn parse(text: &str) -> Result<Conf, Vec<Problem>> {
         let key = name.to_ascii_lowercase();
         if value.is_empty() {
             problem(line, format!("{name} has no value"));
+            // Said once is enough: do not also report the key as missing.
+            private_seen |= section == Section::Interface && key == "privatekey";
             continue;
         }
         match section {

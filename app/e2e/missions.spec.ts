@@ -102,7 +102,7 @@ test('reduced motion: nothing autoplays, and every step can be reached by hand',
 });
 
 test('no page scrolls sideways, and every explanation has a page', async ({ page }) => {
-  for (const path of ['/', '/#/mission/dial-out', '/#/settings', '/#/credits', '/#/concept/cgnat-no-inbound-mapping']) {
+  for (const path of ['/', '/#/mission/dial-out', '/#/mission/write-the-tunnel', '/#/settings', '/#/credits', '/#/concept/cgnat-no-inbound-mapping']) {
     await page.goto(path);
     await expect(page.locator('h1, h2').first()).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -132,4 +132,80 @@ test('the board works from the keyboard', async ({ page, isMobile }) => {
   await expect(page.getByTestId('inspector')).toContainText('203.0.113.50');
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('inspector')).toHaveCount(0);
+});
+
+test('Write the tunnel: the files decide, from the editor', async ({ page }) => {
+  const world = missionWorld('write-the-tunnel');
+  const now = 'Open Jellyfin right after the tunnel comes up';
+  const later = 'Open Jellyfin ten quiet minutes later';
+  const runAttempt = async (label: string) => {
+    await show(page, 'board');
+    await page.getByRole('radio', { name: label }).click();
+    await runToEnd(page);
+  };
+  await page.goto('/#/mission/write-the-tunnel');
+
+  // With no files the server has no tunnel, and the hub has nowhere to send.
+  await runToEnd(page);
+  await expect(page.getByTestId('result')).toHaveAttribute('data-outcome', 'dropped');
+  expect(await loggedSteps(page)).toEqual(stepsOf(grade('write-the-tunnel', world), 'reach-now'));
+
+  // The starter file is not a config yet. The core says where.
+  await show(page, 'brief');
+  await page.getByTestId('check-files').click();
+  await expect(page.getByTestId('file-wg0-conf')).toHaveAttribute('data-status', 'fail');
+  await expect(page.getByTestId('problems-wg0-conf')).toContainText('Line 4');
+  await expect(page.getByTestId('file-server-public-key')).toHaveAttribute('data-status', 'fail');
+
+  // Make a key pair. The public key shown is the one the core derives.
+  await page.getByTestId('make-keys').click();
+  const privateKey = (await page.getByTestId('private-key').textContent()) ?? '';
+  const publicKey = (await page.getByTestId('public-key').textContent()) ?? '';
+  expect(privateKey).toMatch(/^[A-Za-z0-9+/]{43}=$/);
+  await page.getByTestId('place-keys').click();
+  await expect(page.getByTestId('editor-wg0-conf')).toHaveValue(new RegExp(`PrivateKey = ${privateKey.replace(/[+/]/g, '\\$&')}`));
+  await expect(page.getByTestId('editor-server-public-key')).toHaveValue(`${publicKey}\n`);
+
+  // A config with no keepalive: fine at first, dead ten minutes later.
+  const hub = bundle.missions['write-the-tunnel']!.world.nodes.find((n) => n.id === 'hub');
+  const hubKey = hub && 'tunnels' in hub ? hub.tunnels?.[0]?.public_key : undefined;
+  const conf = `[Interface]\nPrivateKey = ${privateKey}\nAddress = 10.8.0.2/24\n\n[Peer]\nPublicKey = ${hubKey}\nEndpoint = 192.0.2.50:51820\nAllowedIPs = 10.8.0.0/24\n`;
+  await page.getByTestId('editor-wg0-conf').fill(conf);
+  await page.getByTestId('check-files').click();
+  await expect(page.getByTestId('file-wg0-conf')).toHaveAttribute('data-status', 'pass');
+  await expect(page.getByTestId('file-server-public-key')).toHaveAttribute('data-status', 'pass');
+
+  const files = { '/root/wg0.conf': conf, '/root/publickey': `${publicKey}\n` };
+  await runAttempt(now);
+  await expect(page.getByTestId('result')).toHaveAttribute('data-outcome', 'delivered');
+  await runAttempt(later);
+  await expect(page.getByTestId('result')).toHaveAttribute('data-outcome', 'dropped');
+  expect(await loggedSteps(page)).toEqual(stepsOf(grade('write-the-tunnel', world, files), 'reach-later'));
+  await expect(page.getByTestId('debrief')).toHaveCount(0);
+
+  // A public key from another pair: the core refuses it, and so does the hub.
+  await show(page, 'brief');
+  await page.getByTestId('editor-server-public-key').fill('hSDwCYkwp1R0i33ctD73Wg2/Og0mOBr066SpjqqbTmo=');
+  await expect(page.getByTestId('file-wg0-conf')).toHaveAttribute('data-status', 'waiting');
+  await page.getByTestId('check-files').click();
+  await expect(page.getByTestId('file-server-public-key')).toHaveAttribute('data-status', 'fail');
+  await runAttempt(now);
+  await expect(page.getByTestId('result')).toHaveAttribute('data-outcome', 'dropped');
+
+  // The right key and a keepalive: both attempts get through.
+  await show(page, 'brief');
+  await page.getByTestId('editor-server-public-key').fill(publicKey);
+  await page.getByTestId('editor-wg0-conf').fill(`${conf}PersistentKeepalive = 25\n`);
+  await page.getByTestId('check-files').click();
+  await expect(page.getByTestId('file-wg0-conf')).toHaveAttribute('data-status', 'pass');
+  await runAttempt(now);
+  await runAttempt(later);
+  await expect(page.getByTestId('debrief')).toContainText('Mission complete');
+  const solved = grade('write-the-tunnel', world, { '/root/wg0.conf': `${conf}PersistentKeepalive = 25\n`, '/root/publickey': publicKey });
+  expect(solved.status).toBe('pass');
+  expect(await loggedSteps(page)).toEqual(stepsOf(solved, 'reach-later'));
+
+  // The private key stays in this browser's storage and nowhere else.
+  const saved = await page.evaluate(() => localStorage.getItem('homelab-sim:v1') ?? '');
+  expect(saved).toContain(privateKey);
 });

@@ -1,0 +1,171 @@
+# Licensed CC BY-SA 4.0. See missions/LICENSE.md.
+id: write-the-tunnel
+order: 5
+title: Write the tunnel
+concept: A WireGuard config, written by hand
+scenario: >-
+  The mesh VPN did the work for Arjun. Now he builds the same thing himself.
+  He rents a small server in Mumbai that has a public address, and calls it
+  the hub. The hub and the phone are already set up. The home server is not.
+guided:
+  brief: >-
+    Write /root/wg0.conf for the home server, and give the hub the server's
+    public key. The hub is at 192.0.2.50, port 51820. The tunnel network is
+    10.8.0.0/24: the hub is 10.8.0.1, the server is 10.8.0.2 and the phone is
+    10.8.0.3. Make a key pair, fill in the file, save the public key in
+    /root/publickey, then press Check my files and Run.
+  hints:
+    - Make a key pair first. The private key goes in the config. The public key goes in /root/publickey.
+    - The server sits behind carrier NAT, so it must dial the hub. Endpoint is the hub's address and port, written as 192.0.2.50:51820.
+    - AllowedIPs says which tunnel addresses may come from this peer. The phone's packets arrive through the hub, so allow the whole tunnel network.
+    - If it works at first and fails ten minutes later, nothing is keeping the NAT mappings alive. Add PersistentKeepalive, shorter than the shortest NAT timeout on the path.
+challenge:
+  brief: >-
+    Reach Jellyfin on the home server from the phone, through the hub at
+    192.0.2.50 port 51820, ten minutes after the tunnel was last used. The
+    tunnel network is 10.8.0.0/24 and the server is 10.8.0.2. Write
+    /root/wg0.conf and put the server's public key in /root/publickey.
+  hints:
+    - Which side can start the conversation, and what keeps it going when nobody is watching a film?
+layout:
+  wide: { phone: [0, 140], mobile: [190, 140], internet: [380, 140], hub: [380, 0], isp: [570, 140], home-router: [760, 140], server: [950, 140] }
+  narrow: { phone: [0, 0], mobile: [0, 84], internet: [0, 168], hub: [185, 126], isp: [0, 252], home-router: [0, 336], server: [0, 420] }
+goals:
+  - id: reach-now
+    text: The phone opens Jellyfin through the hub
+    check: { kind: delivered, attempt: reach-now, to: server }
+  - id: reach-later
+    text: It still works after ten quiet minutes
+    check: { kind: delivered, attempt: reach-later, to: server }
+artifacts:
+  - id: wg0-conf
+    path: /root/wg0.conf
+    kind: wireguard_conf
+    label: WireGuard config for the home server
+    node: server
+    tunnel: wg0
+    starter: |
+      # /root/wg0.conf on the home server
+      [Interface]
+      # The server's own private key. Never share it.
+      PrivateKey =
+      # The server's address inside the tunnel.
+      Address = 10.8.0.2/24
+
+      [Peer]
+      # The hub: the rented server with a public address.
+      PublicKey = W9J3Hqm8EgeN6UewWxIP6ccD2CQZ8cC6fWREezgTW1U=
+      # Where to find the hub on the internet, as address:port.
+      Endpoint =
+      # Which tunnel addresses may arrive from this peer.
+      AllowedIPs =
+  - id: server-public-key
+    path: /root/publickey
+    kind: wireguard_public_key
+    label: The server's public key, for the hub
+    node: server
+    tunnel: wg0
+    register_on: hub
+debrief:
+  did: >-
+    You wrote by hand what the mesh VPN set up for you. The server dialled the
+    hub, because nothing can dial the server. The hub knew the server by its
+    public key, and learned where to find it from that first packet. A small
+    packet every few seconds kept every NAT mapping on the path alive, so the
+    phone's traffic could ride back in ten minutes later.
+  concept: tunnel-keepalive-missing
+  real_line: >-
+    This needs a server with a public address, which usually means renting
+    one. On the hub you would add the server's public key as a peer and turn
+    on IP forwarding. On the home server, the file lives at
+    /etc/wireguard/wg0.conf and `wg-quick up wg0` brings it up. Keep the
+    private key on the server only.
+world:
+  nodes:
+    - kind: host
+      id: phone
+      label: Phone on mobile data
+      icon: phone
+      tunnels:
+        - id: wg0
+          address: 10.8.0.3/24
+          public_key: SkifF5LojM/Ns7UUYJeZMb/cG4NPREjAS+VB5gCXTW0=
+          peers:
+            - public_key: W9J3Hqm8EgeN6UewWxIP6ccD2CQZ8cC6fWREezgTW1U=
+              endpoint: { host: 192.0.2.50, port: 51820 }
+              allowed_ips: [10.8.0.0/24]
+              keepalive_s: 25
+    - kind: isp
+      id: mobile
+      label: Mobile network
+      ipv4: cgnat
+      public_pool: 198.51.100.0/24
+      cgnat_pool: 100.72.5.0/24
+      udp_timeout_s: 30
+    - kind: internet
+      id: internet
+      label: Internet
+    - kind: host
+      id: hub
+      label: Rented server (Mumbai)
+      icon: relay
+      static_ipv4: 192.0.2.50
+      forwarding: true
+      tunnels:
+        - id: wg0
+          address: 10.8.0.1/24
+          listen_port: 51820
+          public_key: W9J3Hqm8EgeN6UewWxIP6ccD2CQZ8cC6fWREezgTW1U=
+          peers:
+            # The server's key is whatever the learner registers.
+            - node: server
+              allowed_ips: [10.8.0.2/32]
+            - public_key: SkifF5LojM/Ns7UUYJeZMb/cG4NPREjAS+VB5gCXTW0=
+              allowed_ips: [10.8.0.3/32]
+    - kind: isp
+      id: isp
+      label: Home ISP
+      profile: teaching-fibre
+      ipv4: cgnat
+      public_pool: 203.0.113.0/24
+      cgnat_pool: 100.64.12.0/24
+      udp_timeout_s: 60
+    - kind: router
+      id: home-router
+      label: Home router
+      lan: 192.168.1.0/24
+      udp_timeout_s: 120
+    - kind: host
+      id: server
+      label: Jellyfin server
+      icon: server
+      device: old-laptop
+      static_ipv4: 192.168.1.20
+      services:
+        - { id: jellyfin, label: Jellyfin, proto: tcp, port: 8096 }
+      tunnels:
+        # Filled in from /root/wg0.conf.
+        - { id: wg0, enabled: false }
+  links:
+    # Lengths and rates are a teaching model: a hostel in Bengaluru, a home in
+    # Pune, and exchanges in Mumbai. Straight-line distances, rounded.
+    - { id: phone-mobile, a: phone, b: mobile, medium: cellular, length_m: 2000, rate_ab_bps: 8000000, rate_ba_bps: 20000000, load_permille: 200, extra_ns: 15000000 }
+    - { id: mobile-internet, a: mobile, b: internet, medium: backbone, length_m: 840000, rate_ab_bps: 10000000000, rate_ba_bps: 10000000000, load_permille: 300 }
+    - { id: hub-internet, a: hub, b: internet, medium: backbone, length_m: 5000, rate_ab_bps: 1000000000, rate_ba_bps: 1000000000 }
+    - { id: isp-internet, a: isp, b: internet, medium: backbone, length_m: 120000, rate_ab_bps: 10000000000, rate_ba_bps: 10000000000, load_permille: 300 }
+    - { id: home-isp, a: home-router, b: isp, medium: fibre, length_m: 8000, rate_ab_bps: 50000000, rate_ba_bps: 100000000, load_permille: 100 }
+    - { id: server-home, a: server, b: home-router, medium: ethernet, length_m: 5, rate_ab_bps: 1000000000, rate_ba_bps: 1000000000 }
+  attempts:
+    - id: reach-now
+      label: Open Jellyfin right after the tunnel comes up
+      from: phone
+      to: { kind: address, ip: 10.8.0.2 }
+      proto: tcp
+      port: 8096
+    - id: reach-later
+      label: Open Jellyfin ten quiet minutes later
+      from: phone
+      to: { kind: address, ip: 10.8.0.2 }
+      proto: tcp
+      port: 8096
+      idle_s: 600

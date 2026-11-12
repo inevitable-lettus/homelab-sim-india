@@ -381,7 +381,7 @@ pub struct ArtifactSpec {
     /// For a public key: the host whose tunnel should list it as a peer.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub register_on: Option<Id>,
-    /// Starting text for the file editor.
+    /// Starting text for the file editor at guided depth. Challenge starts empty.
     #[serde(default)]
     pub starter: String,
 }

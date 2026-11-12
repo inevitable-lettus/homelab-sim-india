@@ -8,13 +8,13 @@ const text = readFileSync(resolve('public/data/bundle.json'), 'utf8');
 export const bundle = JSON.parse(text) as Bundle;
 
 let ready = false;
-export function grade(mission: string, world: World): Grade {
+export function grade(mission: string, world: World, files: Record<string, string> = {}): Grade {
   if (!ready) {
     initSync({ module: readFileSync(resolve('src/wasm-pkg/sim_wasm_bg.wasm')) });
     set_bundle(text);
     ready = true;
   }
-  return JSON.parse(grade_json(mission, '"guided"', JSON.stringify(world), '{"files":{}}')) as Grade;
+  return JSON.parse(grade_json(mission, '"guided"', JSON.stringify(world), JSON.stringify({ files }))) as Grade;
 }
 
 export function missionWorld(id: string): World {

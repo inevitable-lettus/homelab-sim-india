@@ -205,6 +205,8 @@ export interface ArtifactSpec {
   label: string;
   node: Id;
   tunnel: Id;
+  register_on?: Id;
+  /** Starting text at guided depth. Challenge starts with an empty file. */
   starter: string;
 }
 

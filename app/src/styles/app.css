@@ -1921,3 +1921,112 @@ a.track__item:hover {
     transform: translateY(16px);
   }
 }
+
+/* ---------------------------------------------------------- graded files */
+
+.files {
+  display: grid;
+  gap: var(--s3);
+}
+.files__note {
+  color: var(--ink-3);
+  font-size: var(--text-sm);
+}
+.files__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s3);
+}
+.file {
+  display: grid;
+  gap: var(--s2);
+}
+.file__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s1) var(--s3);
+}
+.file__head label {
+  display: grid;
+  font-size: var(--text-sm);
+}
+.file__label {
+  font-weight: 620;
+}
+.file__path {
+  color: var(--ink-3);
+}
+.file__editor {
+  display: block;
+  min-height: 0;
+  padding: var(--s2) var(--s3);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  /* Long keys wrap, so the page never scrolls sideways. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  resize: vertical;
+  tab-size: 2;
+}
+.file__editor[readonly] {
+  background: var(--bg);
+  color: var(--ink-2);
+}
+.file[data-status='pass'] .file__editor {
+  border-color: var(--pass);
+}
+.file__result {
+  display: grid;
+  gap: var(--s2);
+  font-size: var(--text-sm);
+}
+.file__problems {
+  display: grid;
+  gap: var(--s1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--fail);
+}
+.file__line {
+  display: inline-block;
+  min-width: 4.5em;
+  font-weight: 620;
+  font-variant-numeric: tabular-nums;
+}
+.keytool {
+  display: grid;
+  gap: var(--s2);
+  justify-items: start;
+  padding: var(--s3);
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  background: var(--surface);
+}
+.keytool h4 {
+  font-size: var(--text-sm);
+}
+.keytool__keys {
+  display: grid;
+  gap: var(--s1);
+  width: 100%;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+.keytool__keys dt {
+  color: var(--ink-3);
+}
+.keytool__keys dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s1) var(--s3);
+  margin: 0 0 var(--s2);
+}
+.keytool__keys code {
+  overflow-wrap: anywhere;
+  user-select: all;
+}

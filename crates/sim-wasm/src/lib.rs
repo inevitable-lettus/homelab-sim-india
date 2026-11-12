@@ -64,3 +64,10 @@ pub fn resolve_json(world_json: &str, target_json: &str) -> Result<String, JsErr
     let target: Target = serde_json::from_str(target_json)?;
     with_bundle(|bundle| Ok(serde_json::to_string(&sim_core::resolve_target(&world, &target, bundle))?))
 }
+
+/// The public key for a WireGuard private key, as `wg pubkey` prints it.
+/// `None` when the text is not a key.
+#[wasm_bindgen]
+pub fn wireguard_public_key(private_key: &str) -> Option<String> {
+    sim_core::wireguard::public_key(private_key)
+}

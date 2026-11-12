@@ -9,8 +9,8 @@
     - open-a-door
     - the-wall
     - dial-out
+    - write-the-tunnel
   planned:
-    - { title: Write the tunnel, concept: A WireGuard config in a real Linux terminal }
     - { title: Share a website, concept: "A tunnel connector for public access, and what it costs you" }
     - { title: The IPv6 side door, concept: "Inbound IPv6, the firewall, and clients without IPv6" }
     - { title: Rent a front door, concept: Relay through a small rented server }

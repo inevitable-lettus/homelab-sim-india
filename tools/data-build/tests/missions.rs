@@ -1,4 +1,4 @@
-//! Every win and failure path of Missions 1 to 4, run against the real mission
+//! Every win and failure path of Missions 1 to 5, run against the real mission
 //! files and the real data build. If a mission file changes in a way that
 //! breaks its own lesson, this fails.
 
@@ -534,6 +534,215 @@ fn join_all(world: &mut World) {
     }
 }
 
+// ------------------------------------------------ Mission 5: write the tunnel
+
+// A key pair made with Node's crypto module, not with our own code.
+const SERVER_PRIVATE: &str = "EPXV4Q6FxuX4RT/KMQEiBWRYOGE5t/32aTjX944kZ18=";
+const SERVER_PUBLIC: &str = "8zk2Okc5d/z9exmtbj/2cGf2/lZdwOfXFU7s4sItJjo=";
+const HUB_PUBLIC: &str = "W9J3Hqm8EgeN6UewWxIP6ccD2CQZ8cC6fWREezgTW1U=";
+const PHONE_PUBLIC: &str = "SkifF5LojM/Ns7UUYJeZMb/cG4NPREjAS+VB5gCXTW0=";
+
+fn good_conf() -> String {
+    format!(
+        "[Interface]\nPrivateKey = {SERVER_PRIVATE}\nAddress = 10.8.0.2/24\n\n[Peer]\nPublicKey = {HUB_PUBLIC}\n\
+         Endpoint = 192.0.2.50:51820\nAllowedIPs = 10.8.0.0/24\nPersistentKeepalive = 25\n"
+    )
+}
+
+fn files(conf: Option<&str>, public_key: Option<&str>) -> Artifacts {
+    let mut artifacts = Artifacts::default();
+    if let Some(conf) = conf {
+        artifacts.files.insert("/root/wg0.conf".into(), conf.into());
+    }
+    if let Some(key) = public_key {
+        artifacts.files.insert("/root/publickey".into(), key.into());
+    }
+    artifacts
+}
+
+fn tunnel_grade(conf: Option<&str>, public_key: Option<&str>) -> Grade {
+    let m = mission("write-the-tunnel");
+    sim_core::grade(m, Depth::Guided, &m.world, &files(conf, public_key), bundle())
+}
+
+fn artifact(grade: &Grade, id: &str) -> (Status, Reason) {
+    let a = grade.artifacts.iter().find(|a| a.id == id).expect("artifact exists");
+    (a.status, a.reason)
+}
+
+fn setup<'a>(trace: &'a Trace, id: &str) -> &'a sim_core::trace::Leg {
+    trace.legs.iter().find(|leg| leg.id == id).unwrap_or_else(|| panic!("no leg {id}"))
+}
+
+fn leg_dropped(leg: &sim_core::trace::Leg, at: &str, reason: Reason) {
+    let last = leg.steps.last().expect("steps");
+    assert_eq!(last.action, StepAction::Drop);
+    assert_eq!((last.at.as_str(), last.reason), (at, reason));
+}
+
+#[test]
+fn m5_starts_with_no_files_and_no_tunnel() {
+    let g = tunnel_grade(None, None);
+    assert_eq!(g.status, Status::Fail);
+    assert_eq!(artifact(&g, "wg0-conf"), (Status::Fail, Reason::ArtifactMissing));
+    assert_eq!(artifact(&g, "server-public-key"), (Status::Fail, Reason::ArtifactMissing));
+    // The phone reaches the hub, and the hub has nowhere to send it.
+    dropped(attempt(&g, "reach-now"), "hub", Reason::TunnelNoEndpoint);
+}
+
+#[test]
+fn m5_the_starter_file_is_not_yet_a_config() {
+    let m = mission("write-the-tunnel");
+    let starter = &m.artifacts[0].starter;
+    let g = tunnel_grade(Some(starter), Some(SERVER_PUBLIC));
+    let conf = g.artifacts.iter().find(|a| a.id == "wg0-conf").expect("artifact");
+    assert_eq!((conf.status, conf.reason), (Status::Fail, Reason::ArtifactInvalid));
+    let lines: Vec<u32> = conf.problems.iter().map(|p| p.line).collect();
+    assert_eq!(lines, vec![4, 12, 14], "{:?}", conf.problems);
+    // With no readable config there is no private key to compare with.
+    assert_eq!(artifact(&g, "server-public-key"), (Status::Unknown, Reason::ArtifactKeyUnchecked));
+    assert_eq!(g.status, Status::Fail);
+}
+
+#[test]
+fn m5_a_correct_config_wins_through_the_hub() {
+    let g = tunnel_grade(Some(&good_conf()), Some(&format!("{SERVER_PUBLIC}\n")));
+    assert_eq!(artifact(&g, "wg0-conf"), (Status::Pass, Reason::ArtifactOk));
+    assert_eq!(artifact(&g, "server-public-key"), (Status::Pass, Reason::ArtifactOk));
+    assert_eq!(goal(&g, "reach-now"), (Status::Pass, Reason::GoalMet));
+    assert_eq!(goal(&g, "reach-later"), (Status::Pass, Reason::GoalMet));
+    assert_eq!(g.status, Status::Pass);
+
+    let t = attempt(&g, "reach-later");
+    assert_eq!(t.outcome, Outcome::Delivered);
+    assert_eq!(t.ended_at.as_deref(), Some("server"));
+    // The server dialled first. Its handshake went out through both NATs.
+    let dial = setup(t, "setup-server-wg0");
+    assert_eq!(dial.role, LegRole::Setup);
+    assert_eq!(dial.steps.first().expect("step").at, "server");
+    assert_eq!(dial.steps.last().expect("step").at, "hub");
+    assert_eq!(dial.steps.last().expect("step").reason, Reason::TunnelSessionUp);
+    // The phone's packet is passed on by the hub, and gets in on the mapping
+    // the server's own packets keep alive.
+    let request = t.request().expect("request");
+    let path: Vec<&str> = request.steps.iter().map(|s| s.at.as_str()).collect();
+    assert_eq!(path, ["phone", "mobile", "internet", "hub", "internet", "isp", "home-router", "server", "server"]);
+    assert!(request.steps.iter().any(|s| s.at == "hub" && s.reason == Reason::HubForwards));
+    let at_isp = request.steps.iter().find(|s| s.at == "isp").expect("isp step");
+    let table = at_isp.table.as_ref().expect("table");
+    assert_eq!(table.kind, TableKind::MappingHit);
+    assert_eq!(table.row.as_ref().expect("row").idle_s, 25);
+    let reply = t.legs.iter().find(|leg| leg.role == LegRole::Reply).expect("reply");
+    assert_eq!(reply.steps.last().expect("step").at, "phone");
+    assert_eq!(finding(&g, Reason::TunnelKeepalive), (Status::Pass, Reason::TunnelKeepalive));
+}
+
+#[test]
+fn m5_without_a_keepalive_it_works_at_first_then_the_mapping_expires() {
+    let conf = good_conf().replace("PersistentKeepalive = 25\n", "");
+    let g = tunnel_grade(Some(&conf), Some(SERVER_PUBLIC));
+    assert_eq!(artifact(&g, "wg0-conf"), (Status::Pass, Reason::ArtifactOk));
+    assert_eq!(goal(&g, "reach-now"), (Status::Pass, Reason::GoalMet));
+    assert_eq!(goal(&g, "reach-later"), (Status::Fail, Reason::GoalNotMet));
+    dropped(attempt(&g, "reach-later"), "isp", Reason::MappingExpired);
+    assert_eq!(finding(&g, Reason::TunnelKeepalive), (Status::Fail, Reason::TunnelKeepaliveMissing));
+    assert_eq!(g.status, Status::Fail);
+}
+
+#[test]
+fn m5_a_keepalive_slower_than_the_isp_timeout_also_expires() {
+    // The home ISP forgets after 60 seconds, the router after 120.
+    for (seconds, stops_at) in [(59, None), (60, Some("isp")), (90, Some("isp")), (300, Some("isp"))] {
+        let conf = good_conf().replace("= 25", &format!("= {seconds}"));
+        let g = tunnel_grade(Some(&conf), Some(SERVER_PUBLIC));
+        match stops_at {
+            None => assert_eq!(g.status, Status::Pass, "{seconds}"),
+            Some(node) => {
+                assert_eq!(goal(&g, "reach-now"), (Status::Pass, Reason::GoalMet), "{seconds}");
+                dropped(attempt(&g, "reach-later"), node, Reason::MappingExpired);
+                assert_eq!(finding(&g, Reason::TunnelKeepalive), (Status::Fail, Reason::TunnelKeepaliveTooSlow));
+            }
+        }
+    }
+}
+
+#[test]
+fn m5_a_wrong_endpoint_never_reaches_the_hub() {
+    // Wrong port: the hub is there, but nothing listens on that port.
+    let g = tunnel_grade(Some(&good_conf().replace(":51820", ":51821")), Some(SERVER_PUBLIC));
+    let t = attempt(&g, "reach-now");
+    leg_dropped(setup(t, "setup-server-wg0"), "hub", Reason::NoService);
+    dropped(t, "hub", Reason::TunnelNoEndpoint);
+    assert_eq!(g.status, Status::Fail);
+    // Wrong address: nobody is there at all.
+    let g = tunnel_grade(Some(&good_conf().replace("192.0.2.50", "192.0.2.51")), Some(SERVER_PUBLIC));
+    let t = attempt(&g, "reach-now");
+    let dial = setup(t, "setup-server-wg0");
+    assert_eq!(dial.steps.last().expect("step").action, StepAction::Drop);
+    assert_ne!(dial.steps.last().expect("step").at, "hub");
+    dropped(t, "hub", Reason::TunnelNoEndpoint);
+    // The server's own address, as some guides wrongly show.
+    let g = tunnel_grade(Some(&good_conf().replace("192.0.2.50", "10.8.0.1")), Some(SERVER_PUBLIC));
+    assert_eq!(goal(&g, "reach-now"), (Status::Fail, Reason::GoalNotMet));
+}
+
+#[test]
+fn m5_allowed_ips_too_narrow_drops_the_phone_at_the_server() {
+    // Only the hub's own address: the phone's packets come from 10.8.0.3.
+    let g = tunnel_grade(Some(&good_conf().replace("10.8.0.0/24", "10.8.0.1/32")), Some(SERVER_PUBLIC));
+    assert_eq!(artifact(&g, "wg0-conf"), (Status::Pass, Reason::ArtifactOk));
+    let t = attempt(&g, "reach-now");
+    assert_eq!(setup(t, "setup-server-wg0").steps.last().expect("step").reason, Reason::TunnelSessionUp);
+    dropped(t, "server", Reason::TunnelAllowedIps);
+    assert_eq!(g.status, Status::Fail);
+}
+
+#[test]
+fn m5_a_public_key_from_another_pair_is_refused_by_the_hub() {
+    // A real key, from RFC 7748, that belongs to nobody here.
+    let g = tunnel_grade(Some(&good_conf()), Some("hSDwCYkwp1R0i33ctD73Wg2/Og0mOBr066SpjqqbTmo="));
+    assert_eq!(artifact(&g, "wg0-conf"), (Status::Pass, Reason::ArtifactOk));
+    assert_eq!(artifact(&g, "server-public-key"), (Status::Fail, Reason::ArtifactKeyMismatch));
+    let t = attempt(&g, "reach-now");
+    leg_dropped(setup(t, "setup-server-wg0"), "hub", Reason::TunnelUnknownPeer);
+    dropped(t, "hub", Reason::TunnelNoEndpoint);
+    assert_eq!(g.status, Status::Fail);
+}
+
+#[test]
+fn m5_a_missing_or_broken_public_key_never_passes() {
+    for key in [None, Some("not a key"), Some("")] {
+        let g = tunnel_grade(Some(&good_conf()), key);
+        let expected = if key.is_none() { Reason::ArtifactMissing } else { Reason::ArtifactInvalid };
+        assert_eq!(artifact(&g, "server-public-key"), (Status::Fail, expected));
+        leg_dropped(setup(attempt(&g, "reach-now"), "setup-server-wg0"), "hub", Reason::TunnelUnknownPeer);
+        assert_eq!(g.status, Status::Fail);
+    }
+}
+
+#[test]
+fn m5_the_wrong_key_for_the_hub_cannot_be_opened() {
+    let g = tunnel_grade(Some(&good_conf().replace(HUB_PUBLIC, PHONE_PUBLIC)), Some(SERVER_PUBLIC));
+    assert_eq!(artifact(&g, "wg0-conf"), (Status::Pass, Reason::ArtifactOk));
+    let t = attempt(&g, "reach-now");
+    leg_dropped(setup(t, "setup-server-wg0"), "hub", Reason::TunnelWrongPeerKey);
+    assert_eq!(g.status, Status::Fail);
+}
+
+#[test]
+fn m5_the_wrong_tunnel_address_is_not_the_one_the_phone_dials() {
+    let g = tunnel_grade(Some(&good_conf().replace("10.8.0.2/24", "10.8.0.9/24")), Some(SERVER_PUBLIC));
+    assert_eq!(goal(&g, "reach-now"), (Status::Fail, Reason::GoalNotMet));
+    assert_eq!(attempt(&g, "reach-now").ended_at.as_deref(), Some("server"));
+}
+
+#[test]
+fn m5_the_private_key_is_nowhere_in_the_grade() {
+    let g = tunnel_grade(Some(&good_conf()), Some(SERVER_PUBLIC));
+    let json = serde_json::to_string(&g).expect("json");
+    assert!(!json.contains(SERVER_PRIVATE));
+}
+
 // ----------------------------------- A new device is one YAML file, no code
 
 fn copy_dir(from: &Path, to: &Path) {
@@ -648,6 +857,13 @@ fn mission_reports_match_the_recorded_fixtures() {
                 serde_json::to_value(sim_core::grade(m, depth, world, &Artifacts::default(), bundle())).expect("json")
             };
             out.insert(name("start"), graded(&m.world));
+            if m.id == "write-the-tunnel" {
+                // Solved by its files, not by changes to the world.
+                let solved = files(Some(&good_conf()), Some(SERVER_PUBLIC));
+                let grade = sim_core::grade(m, depth, &m.world, &solved, bundle());
+                out.insert(name("solved"), serde_json::to_value(grade).expect("json"));
+                continue;
+            }
             let mut solved = m.world.clone();
             join_all(&mut solved);
             if let Some(router) = solved.router_mut("home-router") {

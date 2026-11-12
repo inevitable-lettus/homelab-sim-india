@@ -17,9 +17,11 @@ export interface Saved {
   done: Record<Id, Partial<Record<Depth, string>>>;
   /** The learner's board for a mission they have started. */
   drafts: Record<Id, World>;
+  /** Files the learner is writing for a mission, by path. Lesson keys only. */
+  files: Record<Id, Record<string, string>>;
 }
 
-const fresh = (): Saved => ({ version: 1, depth: 'guided', motion: 'system', theme: 'system', done: {}, drafts: {} });
+const fresh = (): Saved => ({ version: 1, depth: 'guided', motion: 'system', theme: 'system', done: {}, drafts: {}, files: {} });
 
 function read(): Saved {
   try {
@@ -60,6 +62,14 @@ export const progress = {
     const drafts = { ...state.drafts };
     delete drafts[mission];
     write({ ...state, drafts });
+  },
+  saveFiles(mission: Id, files: Record<string, string>) {
+    write({ ...state, files: { ...state.files, [mission]: files } });
+  },
+  dropFiles(mission: Id) {
+    const files = { ...state.files };
+    delete files[mission];
+    write({ ...state, files });
   },
   clear: () => write(fresh()),
   export: () => JSON.stringify(state, null, 2),

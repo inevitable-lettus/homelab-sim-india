@@ -1,6 +1,6 @@
 // The left-hand panel: the brief, the goals, what the learner can change,
 // hints, findings and the debrief.
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ExplainSections, hasDetail } from '../components/Explain';
 import { StatusMark, verdictWord } from '../components/Status';
 import { ArrowRightIcon, BulbIcon } from '../components/icons';
@@ -18,6 +18,8 @@ interface BriefProps {
   ran: ReadonlySet<Id>;
   onChange: (world: World) => void;
   onReset: () => void;
+  /** The file editor, on missions that grade files. */
+  files?: ReactNode;
 }
 
 export function goalRevealed(goal: Mission['goals'][number], ran: ReadonlySet<Id>): boolean {
@@ -26,7 +28,7 @@ export function goalRevealed(goal: Mission['goals'][number], ran: ReadonlySet<Id
   return ran.size > 0;
 }
 
-function Goals({ mission, depth, world, grade, bundle, ran, onChange }: Omit<BriefProps, 'onReset'>) {
+function Goals({ mission, depth, world, grade, bundle, ran, onChange }: Omit<BriefProps, 'onReset' | 'files'>) {
   const goals = mission.goals.filter((goal) => !goal.depth || goal.depth === depth);
   return (
     <ol className="goals" data-testid="goals">
@@ -90,7 +92,7 @@ function Hints({ hints, depth }: { hints: string[]; depth: Depth }) {
 }
 
 export function Brief(props: BriefProps) {
-  const { mission, depth, world, grade, onChange, onReset } = props;
+  const { mission, depth, world, grade, onChange, onReset, files } = props;
   const text = mission[depth];
   return (
     <div className="brief">
@@ -106,6 +108,8 @@ export function Brief(props: BriefProps) {
         <h3>Goals</h3>
         <Goals {...props} />
       </section>
+
+      {files}
 
       {mission.controls.some((c) => c.kind !== 'question') && (
         <section>
