@@ -4,8 +4,8 @@ order: 4
 title: Dial out to get in
 concept: Outgoing connections, NAT rows and a mesh VPN
 scenario: >-
-  Arjun's ISP drops any incoming packet that nobody asked for. But it lets
-  replies in. If it did not, he could not browse the web at all. So let the
+  Your ISP drops any incoming packet that nobody asked for. But it lets
+  replies in. If it did not, you could not browse the web at all. So let the
   server start the conversation. It dials out to a relay (a computer on the
   internet that passes packets along), and the phone meets it there.
 guided:

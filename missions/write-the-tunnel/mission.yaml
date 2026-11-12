@@ -4,9 +4,9 @@ order: 5
 title: Write the tunnel
 concept: A WireGuard config, written by hand
 scenario: >-
-  The mesh VPN did the work for Arjun. Now he builds the same thing himself.
-  He rents a small server in Mumbai that has a public address, and calls it
-  the hub. The hub and the phone are already set up. The home server is not.
+  In the last mission, the mesh VPN did the work for you. Now you build the
+  same thing yourself. You rent a small server that has a public address. This
+  is the hub. The hub and the phone are already set up. The home server is not.
 guided:
   brief: >-
     Write /root/wg0.conf for the home server, and give the hub the server's

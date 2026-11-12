@@ -4,7 +4,7 @@ order: 2
 title: Open a door
 concept: Port forwarding on a line with a public address
 scenario: >-
-  The phone's packet now reaches Meera's router, and the router throws it away.
+  Your phone's packet now reaches your home router, and the router throws it away.
   Nobody told the router which machine inside should get it. This line has its
   own public address, so one rule on the router is enough.
 guided:

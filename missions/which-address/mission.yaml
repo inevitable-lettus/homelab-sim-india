@@ -4,9 +4,9 @@ order: 1
 title: Which address is yours?
 concept: LAN, WAN and public addresses
 scenario: >-
-  Meera runs Jellyfin on an old laptop at home in Pune. She is at her hostel in
-  Bengaluru with only mobile data, and wants to reach it. First question: which
-  address should her phone even dial?
+  You run Jellyfin on an old laptop at home. You are away, with only mobile
+  data on your phone, and you want to reach it. First question: which address
+  should your phone dial?
 guided:
   brief: >-
     A home has more than one address. Which one works depends on who is asking.
