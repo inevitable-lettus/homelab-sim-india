@@ -20,10 +20,17 @@ fn with_bundle<T>(run: impl FnOnce(&Bundle) -> Result<T, JsError>) -> Result<T, 
     })
 }
 
+/// Text to a typed value by way of a JSON tree. Capabilities are read from a
+/// tree in any case, so going through one everywhere means the compiler
+/// writes each type's reader once, not once per kind of input.
+fn parse<T: serde::de::DeserializeOwned>(json: &str) -> Result<T, serde_json::Error> {
+    serde_json::from_value(serde_json::from_str::<serde_json::Value>(json)?)
+}
+
 /// Load the data bundle. Call once before anything else.
 #[wasm_bindgen]
 pub fn set_bundle(bundle_json: &str) -> Result<(), JsError> {
-    let bundle: Bundle = serde_json::from_str(bundle_json)?;
+    let bundle: Bundle = parse(bundle_json)?;
     if bundle.schema_version != SCHEMA_VERSION {
         return Err(JsError::new(&format!(
             "data bundle is schema {} and this core reads schema {SCHEMA_VERSION}",
@@ -34,9 +41,40 @@ pub fn set_bundle(bundle_json: &str) -> Result<(), JsError> {
     Ok(())
 }
 
+/// Add the sandbox catalog to the loaded bundle. Missions never need it, so
+/// it is fetched and merged only when the sandbox opens.
+#[wasm_bindgen]
+pub fn add_catalog_json(catalog_json: &str) -> Result<(), JsError> {
+    let catalog: Bundle = parse(catalog_json)?;
+    if catalog.schema_version != SCHEMA_VERSION {
+        return Err(JsError::new("the catalog and this core are different schema versions"));
+    }
+    BUNDLE.with(|slot| match slot.borrow_mut().as_mut() {
+        Some(bundle) => {
+            bundle.merge(catalog);
+            Ok(())
+        }
+        None => Err(JsError::new("the data bundle has not been loaded")),
+    })
+}
+
+/// What is wrong with a build someone is importing. An empty list means it
+/// can be loaded.
+#[wasm_bindgen]
+pub fn validate_world_json(world_json: &str) -> Result<String, JsError> {
+    use sim_core::build::check::{Problem, ProblemKind, problems};
+    with_bundle(|bundle| {
+        let found = match parse::<World>(world_json) {
+            Ok(world) => problems(&world, bundle),
+            Err(error) => vec![Problem { kind: ProblemKind::Parse, at: error.to_string() }],
+        };
+        Ok(serde_json::to_string(&found)?)
+    })
+}
+
 #[wasm_bindgen]
 pub fn evaluate_json(world_json: &str) -> Result<String, JsError> {
-    let world: World = serde_json::from_str(world_json)?;
+    let world: World = parse(world_json)?;
     with_bundle(|bundle| Ok(serde_json::to_string(&sim_core::evaluate(&world, bundle))?))
 }
 
@@ -48,9 +86,9 @@ pub fn grade_json(
     world_json: &str,
     artifacts_json: &str,
 ) -> Result<String, JsError> {
-    let world: World = serde_json::from_str(world_json)?;
-    let depth: Depth = serde_json::from_str(depth_json)?;
-    let artifacts: Artifacts = serde_json::from_str(artifacts_json)?;
+    let world: World = parse(world_json)?;
+    let depth: Depth = parse(depth_json)?;
+    let artifacts: Artifacts = parse(artifacts_json)?;
     with_bundle(|bundle| {
         let mission = bundle.missions.get(mission_id).ok_or_else(|| JsError::new("no such mission"))?;
         Ok(serde_json::to_string(&sim_core::grade(mission, depth, &world, &artifacts, bundle))?)
@@ -60,8 +98,8 @@ pub fn grade_json(
 /// The address a dial target points at in this world.
 #[wasm_bindgen]
 pub fn resolve_json(world_json: &str, target_json: &str) -> Result<String, JsError> {
-    let world: World = serde_json::from_str(world_json)?;
-    let target: Target = serde_json::from_str(target_json)?;
+    let world: World = parse(world_json)?;
+    let target: Target = parse(target_json)?;
     with_bundle(|bundle| Ok(serde_json::to_string(&sim_core::resolve_target(&world, &target, bundle))?))
 }
 

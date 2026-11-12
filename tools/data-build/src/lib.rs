@@ -417,6 +417,14 @@ fn check_world(path: &str, world: &World, layout: &Layout, bundle: &Bundle, erro
                     fail(format!("`{}` uses unknown device `{device}`", router.id));
                 }
             }
+            Node::Switch(sim_core::model::Switch { id, device, .. })
+            | Node::Power(sim_core::model::PowerUnit { id, device, .. }) => {
+                if let Some(device) = device
+                    && !bundle.devices.contains_key(device)
+                {
+                    fail(format!("`{id}` uses unknown device `{device}`"));
+                }
+            }
             Node::Internet(_) => {}
         }
     }
@@ -550,6 +558,8 @@ pub fn split(full: Bundle) -> (Bundle, Bundle) {
                 Node::Host(host) => devices.extend(host.device.as_deref()),
                 Node::Router(router) => devices.extend(router.device.as_deref()),
                 Node::Isp(isp) => isps.extend(isp.profile.as_deref()),
+                Node::Switch(switch) => devices.extend(switch.device.as_deref()),
+                Node::Power(unit) => devices.extend(unit.device.as_deref()),
                 Node::Internet(_) => {}
             }
         }

@@ -22,7 +22,21 @@ fn finding(rule: Reason, status: Status, severity: Severity, explanation: Reason
         explanation_id: explanation,
         provenance: Provenance::Teaching,
         debrief_only: false,
+        intents: Vec::new(),
     }
+}
+
+/// Errors first, then warnings, then information. Stable for equal input.
+pub(crate) fn sort(findings: &mut [Finding]) {
+    findings.sort_by(|a, b| {
+        (a.severity, a.status, a.rule_id, &a.involved, a.explanation_id).cmp(&(
+            b.severity,
+            b.status,
+            b.rule_id,
+            &b.involved,
+            b.explanation_id,
+        ))
+    });
 }
 
 pub(crate) fn findings(net: &Net, bundle: &Bundle) -> Vec<Finding> {
@@ -120,7 +134,9 @@ pub(crate) fn findings(net: &Net, bundle: &Bundle) -> Vec<Finding> {
                     out.push(finding(rule, Status::Fail, Severity::Error, rule, vec![id.clone()]));
                 }
 
-                if let Some(parent) = &host.runs_on {
+                // A sandbox build names the parent's OS, and the build rules judge it.
+                let modelled = host.runs_on.as_ref().and_then(|p| world.host(p)).is_some_and(|p| p.os.is_some());
+                if let Some(parent) = host.runs_on.as_ref().filter(|_| !modelled) {
                     let rule = Reason::HostVirtualization;
                     let pack = world
                         .node(parent)
@@ -193,19 +209,10 @@ pub(crate) fn findings(net: &Net, bundle: &Bundle) -> Vec<Finding> {
                     });
                 }
             }
-            Node::Isp(_) | Node::Internet(_) => {}
+            Node::Isp(_) | Node::Internet(_) | Node::Switch(_) | Node::Power(_) => {}
         }
     }
 
-    // Errors first, then warnings, then information. Stable for equal input.
-    out.sort_by(|a, b| {
-        (a.severity, a.status, a.rule_id, &a.involved, a.explanation_id).cmp(&(
-            b.severity,
-            b.status,
-            b.rule_id,
-            &b.involved,
-            b.explanation_id,
-        ))
-    });
+    sort(&mut out);
     out
 }

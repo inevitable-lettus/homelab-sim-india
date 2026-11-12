@@ -254,3 +254,152 @@ artifact-key-unchecked:
 three-addresses:
   title: One home, three addresses
   line: Your server has a home address, your router has a WAN address, and the internet sees a public address.
+
+# ---------------------------------------------------------------- sandbox
+# Short first-draft wording for the "build your own" rules. The content
+# author owns the final text and the long explanations.
+
+os-boots-on-device:
+  title: This system on this machine
+  line: Whether the chosen operating system can start on this machine.
+os-requirements-met:
+  title: What the system needs
+  line: Whether the machine has what the operating system asks for.
+hypervisor-needs-virtualization:
+  title: Room for a guest
+  line: A virtual machine needs a host system that runs them and a processor that helps.
+guest-arch-emulated:
+  title: A guest built for another processor
+  line: A guest made for a different kind of processor is translated one instruction at a time, which is very slow, or does not run.
+nested-virtualization:
+  title: A virtual machine inside a virtual machine
+  line: Running a virtual machine inside another needs the processor to allow it.
+service-available:
+  title: A build of this software for this machine
+  line: Whether this software is published for this system and this kind of processor.
+runtime-on-os:
+  title: Something to run containers
+  line: Containers need a container runtime that works on this system.
+container-host-network:
+  title: Containers and the home network
+  line: Some features need the container to sit directly on the home network, and not every runtime allows that.
+transcode-supported:
+  title: Converting video for the player
+  line: When the player cannot play a format, the server converts it. With hardware help that is light work. Without it the processor does it all, and processor speed is not modelled here.
+service-autostart:
+  title: Starting again by itself
+  line: Whether this software starts again after the machine restarts.
+paid-feature-needed:
+  title: A paid feature
+  line: This goal uses a feature the maker charges for, as of the date shown.
+ram-budget:
+  title: Memory
+  line: Whether everything placed on this machine fits in its memory.
+guest-alloc-exceeds-host:
+  title: Memory given to guests
+  line: The memory given to guests, plus the host system, against what the machine has.
+bay-available:
+  title: Drive bays
+  line: Whether each drive has a slot of the right kind.
+usb-port-available:
+  title: USB ports
+  line: Whether there is a USB port for each thing plugged in.
+drive-power:
+  title: Power for the drive
+  line: A 3.5 inch drive needs more power than a USB port gives, so its enclosure needs its own power supply.
+enclosure-uas:
+  title: The enclosure's USB mode
+  line: Whether this enclosure supports the faster, more reliable USB storage mode.
+no-ethernet-port:
+  title: An Ethernet port for the cable
+  line: A cable needs a wired network port on the machine, built in or on a USB adapter.
+ethernet-ports-available:
+  title: Ports on the router or switch
+  line: Whether there is a port for every cable plugged into this box.
+wifi-only-server:
+  title: A server on Wi-Fi only
+  line: A server joined by Wi-Fi alone works, with less steady speed and delay than a cable.
+wifi-available:
+  title: Wi-Fi at both ends
+  line: A Wi-Fi link needs a radio at both ends.
+storage-capacity:
+  title: Room for the data
+  line: Whether the drives on this machine hold what you want to keep.
+single-copy:
+  title: One copy only
+  line: With one copy, a failed drive loses the data.
+os-storage:
+  title: Room for the system
+  line: Whether the machine has the storage the operating system needs.
+router-can-forward:
+  title: A router that lets you forward a port
+  line: Whether this router lets its owner set up a port forward at all.
+home-dns-possible:
+  title: Your own DNS for the whole home
+  line: Whether the router can be told to hand your DNS server to every device.
+static-lan-ip:
+  title: An address that stays the same
+  line: This software wants the machine to keep one address on the home network.
+stream-bandwidth:
+  title: Enough speed for the stream
+  line: The stream's bit rate against the slowest link on the way.
+client-has-app:
+  title: An app on the player
+  line: Whether the player has an app for this server. Without one, a browser may still do.
+intent-reach:
+  title: The connection is made
+  line: The connection this goal needs gets through.
+yearly-cost:
+  title: Electricity cost for a year
+  line: What the build costs to run for a year, against your limit.
+outage-covered:
+  title: Staying up through a power cut
+  line: Whether everything this goal needs stays powered for the whole cut.
+ups-overloaded:
+  title: Too much on the backup
+  line: What is plugged into this unit, at full load, against what it can supply.
+recovers-after-outage:
+  title: Coming back after a power cut
+  line: Whether what went dark starts again by itself when the power returns.
+laptop-as-ups:
+  title: A laptop's own battery
+  line: A laptop keeps running on its battery during a cut, for about the time shown.
+battery-always-charging:
+  title: A battery kept at full charge
+  line: A laptop left plugged in all the time wears its battery faster unless charging is capped.
+lid-closed-running:
+  title: Running with the lid shut
+  line: Whether this system keeps running on this laptop with the lid closed.
+fanless-sustained-load:
+  title: No fan, long work
+  line: A machine with no fan may slow down under long heavy work. That is not modelled here.
+inverter-waveform:
+  title: Rough power from the inverter
+  line: A square-wave inverter can upset a computer's power supply.
+switch-forwards:
+  title: The switch passes it on
+  line: The switch hands the packet to the cable that leads to its destination.
+intent-not-checked:
+  title: Not checked yet
+  line: Nothing in the build has spoken about this goal yet, so it is not a pass.
+learner-value-used:
+  title: Based on what you entered
+  line: This result uses values you typed in for a device we have no data for.
+assumed-busy-share:
+  title: Share of time under load
+  line: An assumption, in thousandths of the time. Real use varies.
+assumed-base-use:
+  title: Units the home already uses
+  line: An assumption, in units a month, used when you have not entered your own.
+assumed-ups-usable:
+  title: Usable share of a UPS battery
+  line: A teaching assumption, in thousandths, for battery depth and inverter loss.
+assumed-laptop-usable:
+  title: Usable share of a laptop battery
+  line: A teaching assumption, in thousandths, for the reserve a battery keeps.
+assumed-isp-stays-up:
+  title: The provider stays up
+  line: An assumption that the provider's side keeps working during the cut.
+assumed-drive-load-ignored:
+  title: Drives counted at idle
+  line: An assumption. Extra power while drives are busy is left out.

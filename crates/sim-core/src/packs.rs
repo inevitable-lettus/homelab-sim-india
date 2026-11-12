@@ -6,11 +6,10 @@
 //! source for this" stay three different things.
 
 use std::collections::BTreeMap;
-use std::marker::PhantomData;
 
-use serde::de::value::{MapAccessDeserializer, SeqAccessDeserializer};
-use serde::de::{self, DeserializeSeed, IntoDeserializer, MapAccess, SeqAccess, Visitor};
+use serde::de::{self, DeserializeOwned};
 use serde::{Deserialize, Deserializer, Serialize};
+use serde_json::Value as Tree;
 
 use crate::Provenance;
 use crate::bundle::{Layout, ProfileKind};
@@ -95,92 +94,58 @@ pub enum Cap<T> {
     Value(T),
 }
 
-struct CapVisitor<T>(PhantomData<T>);
-
-/// Hands a map back to `T` after its first key has been looked at.
-struct Replay<A> {
-    first: Option<String>,
-    map: A,
-}
-
-impl<'de, A: MapAccess<'de>> MapAccess<'de> for Replay<A> {
-    type Error = A::Error;
-
-    fn next_key_seed<K: DeserializeSeed<'de>>(&mut self, seed: K) -> Result<Option<K::Value>, A::Error> {
-        match self.first.take() {
-            Some(key) => seed.deserialize(key.into_deserializer()).map(Some),
-            None => self.map.next_key_seed(seed),
-        }
-    }
-
-    fn next_value_seed<V: DeserializeSeed<'de>>(&mut self, seed: V) -> Result<V::Value, A::Error> {
-        self.map.next_value_seed(seed)
-    }
+/// A capability as it was written, before its value is read as a `T`.
+///
+/// Every `Cap<T>` goes through this one untyped step, so the compiler writes
+/// the three-way reading once and not once per `T`. That is a large part of
+/// keeping the WebAssembly inside its size budget.
+enum Written {
+    Unknown,
+    Value(Tree),
+    Sourced { value: Tree, source: String, retrieved_at: String, basis: Basis, note: Option<String> },
 }
 
 const SOURCED_KEYS: &[&str] = &["value", "source", "retrieved_at", "basis", "note"];
 
-impl<'de, T: Deserialize<'de>> Visitor<'de> for CapVisitor<T> {
-    type Value = Cap<T>;
-
-    fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        f.write_str("a value, the word `unknown`, or `{ value, source, retrieved_at }`")
+/// A map with a `value` key is a sourced value. Any other map is the value
+/// itself, so no pack struct a `Cap` holds may have a field called `value`.
+fn written(tree: Tree) -> Result<Written, String> {
+    let mut map = match tree {
+        Tree::String(word) if word == "unknown" => return Ok(Written::Unknown),
+        Tree::Object(map) if map.contains_key("value") => map,
+        other => return Ok(Written::Value(other)),
+    };
+    let mut text = |key: &str| match map.remove(key) {
+        Some(Tree::String(text)) => Ok(Some(text)),
+        Some(Tree::Null) | None => Ok(None),
+        Some(_) => Err(format!("`{key}` must be text")),
+    };
+    let source = text("source")?.ok_or("missing field `source`")?;
+    let retrieved_at = text("retrieved_at")?.ok_or("missing field `retrieved_at`")?;
+    let note = text("note")?;
+    let basis = match text("basis")?.as_deref() {
+        None | Some("official") => Basis::Official,
+        Some("review") => Basis::Review,
+        Some("community") => Basis::Community,
+        Some(other) => return Err(format!("unknown basis `{other}`, expected official, review or community")),
+    };
+    let value = map.remove("value").unwrap_or(Tree::Null);
+    if let Some(key) = map.keys().next() {
+        return Err(format!("unknown field `{key}`, expected one of {}", SOURCED_KEYS.join(", ")));
     }
-
-    fn visit_bool<E: de::Error>(self, v: bool) -> Result<Cap<T>, E> {
-        T::deserialize(v.into_deserializer()).map(Cap::Value)
-    }
-
-    fn visit_u64<E: de::Error>(self, v: u64) -> Result<Cap<T>, E> {
-        T::deserialize(v.into_deserializer()).map(Cap::Value)
-    }
-
-    fn visit_i64<E: de::Error>(self, v: i64) -> Result<Cap<T>, E> {
-        T::deserialize(v.into_deserializer()).map(Cap::Value)
-    }
-
-    fn visit_str<E: de::Error>(self, v: &str) -> Result<Cap<T>, E> {
-        if v == "unknown" {
-            return Ok(Cap::Unknown(UnknownMark::Unknown));
-        }
-        T::deserialize(v.into_deserializer()).map(Cap::Value)
-    }
-
-    fn visit_seq<A: SeqAccess<'de>>(self, seq: A) -> Result<Cap<T>, A::Error> {
-        T::deserialize(SeqAccessDeserializer::new(seq)).map(Cap::Value)
-    }
-
-    fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Cap<T>, A::Error> {
-        let mut key = map.next_key::<String>()?;
-        if !key.as_deref().is_some_and(|key| SOURCED_KEYS.contains(&key)) {
-            // Not a sourced value: the map is the value itself.
-            return T::deserialize(MapAccessDeserializer::new(Replay { first: key, map })).map(Cap::Value);
-        }
-        let (mut value, mut source, mut retrieved_at, mut basis, mut note) = (None, None, None, None, None);
-        while let Some(name) = key {
-            match name.as_str() {
-                "value" => value = Some(map.next_value::<T>()?),
-                "source" => source = Some(map.next_value::<String>()?),
-                "retrieved_at" => retrieved_at = Some(map.next_value::<String>()?),
-                "basis" => basis = Some(map.next_value::<Basis>()?),
-                "note" => note = map.next_value::<Option<String>>()?,
-                other => return Err(de::Error::unknown_field(other, SOURCED_KEYS)),
-            }
-            key = map.next_key::<String>()?;
-        }
-        Ok(Cap::Sourced {
-            value: value.ok_or_else(|| de::Error::missing_field("value"))?,
-            source: source.ok_or_else(|| de::Error::missing_field("source"))?,
-            retrieved_at: retrieved_at.ok_or_else(|| de::Error::missing_field("retrieved_at"))?,
-            basis: basis.unwrap_or_default(),
-            note,
-        })
-    }
+    Ok(Written::Sourced { value, source, retrieved_at, basis, note })
 }
 
-impl<'de, T: Deserialize<'de>> Deserialize<'de> for Cap<T> {
+impl<'de, T: DeserializeOwned> Deserialize<'de> for Cap<T> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        deserializer.deserialize_any(CapVisitor(PhantomData))
+        let read = |tree: Tree| T::deserialize(tree).map_err(de::Error::custom);
+        Ok(match written(Tree::deserialize(deserializer)?).map_err(de::Error::custom)? {
+            Written::Unknown => Cap::Unknown(UnknownMark::Unknown),
+            Written::Value(tree) => Cap::Value(read(tree)?),
+            Written::Sourced { value, source, retrieved_at, basis, note } => {
+                Cap::Sourced { value: read(value)?, source, retrieved_at, basis, note }
+            }
+        })
     }
 }
 

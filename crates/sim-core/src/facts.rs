@@ -65,7 +65,10 @@ pub(crate) struct Net<'a> {
     /// The neighbour one step closer to the internet.
     pub up: Vec<Option<(usize, usize)>>,
     pub dist: Vec<Option<u32>>,
-    /// Nodes whose upstream is this node, in id order.
+    /// The node that hands this one its address: `up`, looking through switches.
+    pub gw: Vec<Option<usize>>,
+    /// Nodes that take their address from this node, in id order. A host
+    /// behind a switch is a customer of the router the switch hangs off.
     pub customers: Vec<Vec<usize>>,
     /// The node's address on its upstream side. A router's WAN address.
     pub up4: Vec<Addr>,
@@ -119,13 +122,22 @@ impl<'a> Net<'a> {
         }
 
         let mut up = vec![None; n];
-        let mut customers = vec![Vec::new(); n];
         for &i in idx.values() {
             let Some(d) = dist[i].filter(|d| *d > 0) else {
                 continue;
             };
             up[i] = adj[i].iter().copied().find(|&(_, nb)| dist[nb] == Some(d - 1));
-            if let Some((_, parent)) = up[i] {
+        }
+        let is_switch = |i: usize| matches!(world.nodes[i], Node::Switch(_));
+        let mut gw = vec![None; n];
+        let mut customers = vec![Vec::new(); n];
+        for &i in idx.values() {
+            let mut parent = up[i].map(|(_, parent)| parent);
+            while let Some(p) = parent.filter(|p| is_switch(*p)) {
+                parent = up[p].map(|(_, above)| above);
+            }
+            gw[i] = parent;
+            if let Some(parent) = parent.filter(|_| !is_switch(i)) {
                 customers[parent].push(i);
             }
         }
@@ -145,6 +157,7 @@ impl<'a> Net<'a> {
             adj,
             up,
             dist,
+            gw,
             customers,
             up4: vec![Addr::Absent; n],
             up6: vec![Addr::Absent; n],
@@ -190,14 +203,14 @@ impl<'a> Net<'a> {
             Node::Host(host) => (host.static_ipv4.map(IpAddr::V4), host.static_ipv6.map(IpAddr::V6)),
             _ => (None, None),
         };
-        if matches!(node, Node::Isp(_) | Node::Internet(_)) {
+        if matches!(node, Node::Isp(_) | Node::Internet(_) | Node::Switch(_) | Node::Power(_)) {
             return (Addr::Absent, Addr::Absent, None, shared4);
         }
 
         let mut up4 = Addr::Absent;
         let mut up6 = Addr::Absent;
         let mut lan6 = None;
-        if let Some((_, parent)) = self.up[i] {
+        if let Some(parent) = self.gw[i] {
             let position = self.customers[parent].iter().position(|c| *c == i).unwrap_or(0);
             let position = u32::try_from(position).unwrap_or(u32::MAX);
             match &self.world.nodes[parent] {
@@ -237,7 +250,7 @@ impl<'a> Net<'a> {
                         _ => Addr::Absent,
                     };
                 }
-                Node::Host(_) | Node::Internet(_) => {}
+                Node::Host(_) | Node::Internet(_) | Node::Switch(_) | Node::Power(_) => {}
             }
         }
         if let Some(ip) = static4 {
@@ -280,7 +293,7 @@ impl<'a> Net<'a> {
                     Some(Mode::Public) => {}
                     _ => addr = Addr::Unknown,
                 },
-                Node::Host(_) | Node::Internet(_) => {}
+                Node::Host(_) | Node::Internet(_) | Node::Switch(_) | Node::Power(_) => {}
             }
             cur = parent;
         }

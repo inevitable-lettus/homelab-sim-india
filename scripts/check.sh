@@ -3,7 +3,11 @@
 set -eu
 . "$(dirname -- "$0")/env.sh"
 
-BUDGET_BYTES=512000
+# Architecture.md asks for 512000. Raised on 2026-11-12 while the sandbox is
+# being built, by the owner's decision to get it working before tuning for
+# phones. Most of the growth is pack and world readers in the WebAssembly.
+# Bring it back down before release (see Handoff.md, "Size debt").
+BUDGET_BYTES=700000
 
 step() { printf '\n==> %s\n' "$1"; }
 

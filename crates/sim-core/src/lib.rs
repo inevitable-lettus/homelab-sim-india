@@ -7,6 +7,7 @@
 #![forbid(unsafe_code)]
 
 pub mod artifacts;
+pub mod build;
 pub mod bundle;
 pub mod facts;
 pub mod grade;
@@ -78,6 +79,9 @@ pub struct Finding {
     pub provenance: Provenance,
     /// Shown in the debrief only, so beginners are not nagged mid-mission.
     pub debrief_only: bool,
+    /// The sandbox goals this finding counts towards.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub intents: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -85,8 +89,12 @@ pub struct Report {
     pub schema_version: u32,
     pub facts: facts::Facts,
     pub findings: Vec<Finding>,
-    /// One trace per attempt in the world, in the world's order.
+    /// One trace per attempt in the world, in the world's order. In a sandbox
+    /// build, the attempts its goals expand to follow, as `intent:<goal id>`.
     pub attempts: Vec<Trace>,
+    /// Sandbox builds only. Missions leave it out.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub build: Option<build::BuildReport>,
 }
 
 /// What a dial target points at right now, for showing next to the choice.
@@ -122,14 +130,28 @@ pub fn evaluate(world: &World, bundle: &Bundle) -> Report {
                 explanation_id: Reason::BundleSchemaMismatch,
                 provenance: Provenance::Teaching,
                 debrief_only: false,
+                intents: Vec::new(),
             }],
             attempts: Vec::new(),
+            build: None,
         };
     }
-    Report {
-        schema_version: SCHEMA_VERSION,
-        facts: facts::facts(&net),
-        findings: rules::findings(&net, bundle),
-        attempts: world.attempts.iter().map(|attempt| trace(world, attempt, bundle)).collect(),
+    if !world.is_build() {
+        return Report {
+            schema_version: SCHEMA_VERSION,
+            facts: facts::facts(&net),
+            findings: rules::findings(&net, bundle),
+            attempts: world.attempts.iter().map(|attempt| trace(world, attempt, bundle)).collect(),
+            build: None,
+        };
     }
+    // A build's goals become attempts first, so the trace decides them.
+    let expanded = build::expand(world, bundle);
+    let net = facts::Net::build(&expanded, bundle, &facts::Assumptions::new());
+    let attempts: Vec<Trace> = expanded.attempts.iter().map(|attempt| trace(&expanded, attempt, bundle)).collect();
+    let mut findings = rules::findings(&net, bundle);
+    let mut cx = build::Cx::new(&net, bundle, &attempts);
+    build::rules(&mut cx);
+    let build = cx.finish(&mut findings);
+    Report { schema_version: SCHEMA_VERSION, facts: facts::facts(&net), findings, attempts, build: Some(build) }
 }

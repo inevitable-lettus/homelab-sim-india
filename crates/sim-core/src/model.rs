@@ -9,6 +9,7 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use serde::{Deserialize, Serialize};
 
 use crate::ip::IpNet;
+use crate::packs::{DevicePack, InstallMethod};
 use crate::physics::Medium;
 
 pub type Id = String;
@@ -41,6 +42,18 @@ pub struct World {
     /// Results of the learner's own line check, for lines the data cannot settle.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub line_checks: Vec<LineCheck>,
+    /// What the learner wants a sandbox build to do. The core judges each.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub intents: Vec<Intent>,
+    /// Which power unit feeds which node.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub power_feeds: Vec<PowerFeed>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub home: Option<HomePlan>,
+    /// Devices the learner described because we have no pack for them.
+    /// Always `kind: learner`, with ids that start `my-`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub custom_devices: Vec<DevicePack>,
 }
 
 /// A world is described by its own types. In a pack schema it is an object.
@@ -85,6 +98,26 @@ impl World {
         }
     }
 
+    pub fn host(&self, id: &str) -> Option<&Host> {
+        match self.node(id) {
+            Some(Node::Host(host)) => Some(host),
+            _ => None,
+        }
+    }
+
+    /// A sandbox build rather than a mission world: it gets a build report.
+    pub fn is_build(&self) -> bool {
+        !self.intents.is_empty()
+            || self.home.is_some()
+            || !self.power_feeds.is_empty()
+            || !self.custom_devices.is_empty()
+            || self.nodes.iter().any(|node| match node {
+                Node::Host(host) => host.os.is_some() || !host.parts.is_empty(),
+                Node::Switch(_) | Node::Power(_) => true,
+                _ => false,
+            })
+    }
+
     pub fn attempt_mut(&mut self, id: &str) -> Option<&mut Attempt> {
         self.attempts.iter_mut().find(|attempt| attempt.id == id)
     }
@@ -97,6 +130,10 @@ pub enum Node {
     Router(Router),
     Isp(Isp),
     Internet(Internet),
+    /// Transparent: hosts behind it share the router's LAN.
+    Switch(Switch),
+    /// A UPS, an inverter or a DC mini UPS.
+    Power(PowerUnit),
 }
 
 impl Node {
@@ -106,6 +143,8 @@ impl Node {
             Node::Router(n) => &n.id,
             Node::Isp(n) => &n.id,
             Node::Internet(n) => &n.id,
+            Node::Switch(n) => &n.id,
+            Node::Power(n) => &n.id,
         }
     }
 
@@ -115,6 +154,8 @@ impl Node {
             Node::Router(n) => &n.label,
             Node::Isp(n) => &n.label,
             Node::Internet(n) => &n.label,
+            Node::Switch(n) => &n.label,
+            Node::Power(n) => &n.label,
         }
     }
 
@@ -124,6 +165,8 @@ impl Node {
             Node::Router(_) => "router",
             Node::Isp(_) => "isp",
             Node::Internet(_) => "internet",
+            Node::Switch(_) => "switch",
+            Node::Power(_) => "power",
         }
     }
 }
@@ -159,6 +202,114 @@ pub struct Host {
     /// Whether the host passes packets between tunnel peers (`ip_forward`).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub forwarding: bool,
+    /// An OS pack id.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub os: Option<Id>,
+    /// A container runtime pack id.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runtime: Option<Id>,
+    /// What kind of guest this is, when `runs_on` is set.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub guest: Option<GuestKind>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub alloc: Option<Alloc>,
+    /// Drives, adapters and hubs added to the machine.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parts: Vec<Mount>,
+    #[serde(default, skip_serializing_if = "MachineSettings::is_default")]
+    pub settings: MachineSettings,
+    #[serde(default, skip_serializing_if = "Role::is_server")]
+    pub role: Role,
+    /// Share of time under load, in thousandths. Missing means the default.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub busy_permille: Option<u16>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub price: Option<Price>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GuestKind {
+    Vm,
+    Lxc,
+    Container,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Role {
+    #[default]
+    Server,
+    /// Something that plays or opens what a server offers: a phone, a TV.
+    Client,
+}
+
+impl Role {
+    fn is_server(&self) -> bool {
+        *self == Role::Server
+    }
+}
+
+/// What a guest is given by its host.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Alloc {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ram_mb: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disk_gb: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub threads: Option<u32>,
+}
+
+/// A part added to a machine: a drive, an adapter, a hub.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Mount {
+    pub id: Id,
+    /// A device pack id.
+    pub pack: Id,
+    /// Another mount this one sits in: a drive in an enclosure, an adapter on a hub.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub into: Option<Id>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub price: Option<Price>,
+}
+
+/// A price the learner typed in. It stays on their device.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Price {
+    pub paise: u64,
+    /// Already owned, so not part of what there is to buy.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub owned: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MachineSettings {
+    #[serde(default)]
+    pub lid_closed: bool,
+    #[serde(default)]
+    pub charge_limit: bool,
+    /// The learner turned on "power on when mains returns" in firmware.
+    #[serde(default)]
+    pub ac_power_recovery: bool,
+    #[serde(default = "yes")]
+    pub always_on: bool,
+}
+
+impl Default for MachineSettings {
+    fn default() -> Self {
+        Self { lid_closed: false, charge_limit: false, ac_power_recovery: false, always_on: true }
+    }
+}
+
+impl MachineSettings {
+    fn is_default(&self) -> bool {
+        *self == Self::default()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -188,6 +339,14 @@ pub struct Service {
     pub port: u16,
     #[serde(default)]
     pub bind: Bind,
+    /// A service pack id.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub app: Option<Id>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub install: Option<InstallMethod>,
+    /// Starts by itself after a reboot. Missing is unknown.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub autostart: Option<bool>,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -295,6 +454,8 @@ pub struct Router {
     pub ipv6_inbound: Policy,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub ipv6_pinholes: Vec<Pinhole>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub price: Option<Price>,
 }
 
 fn deny() -> Policy {
@@ -375,6 +536,123 @@ pub struct Isp {
 pub struct Internet {
     pub id: Id,
     pub label: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Switch {
+    pub id: Id,
+    pub label: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub device: Option<Id>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub price: Option<Price>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PowerUnit {
+    pub id: Id,
+    pub label: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub device: Option<Id>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub price: Option<Price>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PowerFeed {
+    /// A power unit.
+    pub from: Id,
+    pub to: Id,
+}
+
+/// The household the build sits in: its tariff and the power cut to plan for.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct HomePlan {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tariff: Option<Id>,
+    /// The learner's own rate. It beats the tariff.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rate_paise_per_kwh: Option<u32>,
+    /// Units a month the household already uses, from their bill.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub base_kwh_month: Option<u32>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub free_units_apply: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub outage: Option<Id>,
+}
+
+fn one_stream() -> u8 {
+    1
+}
+
+/// A goal the learner states. "What I want" is data, like an `Attempt`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum Intent {
+    /// "I want this running."
+    Run { id: Id, host: Id, service: Id },
+    /// "Reach it from there."
+    Reach { id: Id, from: Id, host: Id, service: Id, via: Target },
+    /// "Watch films on that client."
+    Stream {
+        id: Id,
+        client: Id,
+        host: Id,
+        service: Id,
+        /// A media format id from the reference table.
+        format: Id,
+        #[serde(default = "one_stream")]
+        streams: u8,
+        /// How the client gets there. Missing: the core picks the home
+        /// address, then a shared mesh, then the public address.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        via: Option<Target>,
+    },
+    /// "Ad-blocking, or my own DNS, for every device at home."
+    HomeDns { id: Id, host: Id, service: Id, router: Id },
+    /// "Keep this much data, optionally with a second copy."
+    Store {
+        id: Id,
+        host: Id,
+        gb: u32,
+        #[serde(default = "one_stream")]
+        copies: u8,
+    },
+    /// "Still works during this power cut, and comes back after it."
+    SurviveOutage { id: Id, outage: Id, keep: Vec<Id> },
+    /// "Running cost under this much a year."
+    YearlyCost { id: Id, max_paise: u64 },
+}
+
+impl Intent {
+    pub fn id(&self) -> &str {
+        match self {
+            Intent::Run { id, .. }
+            | Intent::Reach { id, .. }
+            | Intent::Stream { id, .. }
+            | Intent::HomeDns { id, .. }
+            | Intent::Store { id, .. }
+            | Intent::SurviveOutage { id, .. }
+            | Intent::YearlyCost { id, .. } => id,
+        }
+    }
+
+    /// The host and service this intent is about, when it has them.
+    pub fn subject(&self) -> Option<(&str, Option<&str>)> {
+        match self {
+            Intent::Run { host, service, .. }
+            | Intent::Reach { host, service, .. }
+            | Intent::Stream { host, service, .. }
+            | Intent::HomeDns { host, service, .. } => Some((host, Some(service))),
+            Intent::Store { host, .. } => Some((host, None)),
+            Intent::SurviveOutage { .. } | Intent::YearlyCost { .. } => None,
+        }
+    }
 }
 
 /// A cable, a radio link or a long-distance route between two nodes.

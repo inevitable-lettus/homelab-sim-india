@@ -494,6 +494,8 @@ impl<'a> Engine<'a> {
                 Node::Router(router) => self.at_router(&mut cx, cur, router, &mut pkt),
                 Node::Isp(isp) => self.at_isp(&mut cx, cur, isp, &mut pkt),
                 Node::Internet(_) => self.at_internet(&mut cx, cur, &mut pkt),
+                Node::Switch(_) => self.at_switch(&mut cx, cur, &pkt),
+                Node::Power(_) => cx.drop(Reason::NotConnected, self.view(&pkt), None),
             };
             first = false;
             let link = match next {
@@ -522,6 +524,8 @@ impl<'a> Engine<'a> {
                 Node::Router(_) => 100_000,
                 Node::Isp(_) => 150_000,
                 Node::Internet(_) => 50_000,
+                Node::Switch(_) => 10_000,
+                Node::Power(_) => 0,
             };
             let total_ns = match (propagation_ns, serialization_ns, queue) {
                 (Some(p), Some(s), Some(q)) => Some(p + s + q + wire.extra_ns + processing_ns),
@@ -728,16 +732,42 @@ impl<'a> Engine<'a> {
 
     // ---------------------------------------------------------- routers
 
-    /// The link to the directly attached customer that holds `ip`.
+    /// Whether `node`, or something behind it when it is a switch, holds `ip`.
+    fn holds(&self, node: usize, ip: IpAddr, depth: u8) -> bool {
+        let net = self.net;
+        if matches!(net.world.nodes[node], Node::Switch(_)) {
+            return depth < 8
+                && net.adj[node].iter().any(|&(_, nb)| {
+                    net.up[nb].map(|(_, parent)| parent) == Some(node) && self.holds(nb, ip, depth + 1)
+                });
+        }
+        net.up4[node].known() == Some(ip)
+            || net.up6[node].known() == Some(ip)
+            || net.lan6[node].is_some_and(|lan| lan.contains(ip))
+    }
+
+    /// The link towards the customer that holds `ip`: attached directly, or
+    /// behind a switch.
     fn customer_with(&self, cur: usize, ip: IpAddr) -> Option<usize> {
         let net = self.net;
         net.adj[cur].iter().find_map(|&(link, nb)| {
             let mine = net.up[nb].map(|(_, parent)| parent) == Some(cur);
-            let holds = net.up4[nb].known() == Some(ip)
-                || net.up6[nb].known() == Some(ip)
-                || net.lan6[nb].is_some_and(|lan| lan.contains(ip));
-            (mine && holds).then_some(link)
+            (mine && self.holds(nb, ip, 0)).then_some(link)
         })
+    }
+
+    /// A switch passes a frame towards whoever holds the address, and
+    /// otherwise up towards the router.
+    fn at_switch(&mut self, cx: &mut Cx, cur: usize, pkt: &Pkt) -> Next {
+        let view = self.view(pkt);
+        let down = self.customer_with(cur, pkt.flow.dst.ip).filter(|link| Some(*link) != cx.arrived_on());
+        match down.or_else(|| self.net.up[cur].map(|(link, _)| link).filter(|link| Some(*link) != cx.arrived_on())) {
+            Some(link) => {
+                cx.emit(StepAction::Forward, view, None, Reason::SwitchForwards, None);
+                Next::Out(link)
+            }
+            None => cx.drop(Reason::NoHostAtAddress, view, None),
+        }
     }
 
     fn came_from_uplink(&self, cx: &Cx, cur: usize) -> bool {
@@ -927,7 +957,7 @@ impl<'a> Engine<'a> {
             let owns = match &net.world.nodes[nb] {
                 Node::Host(_) => net.up4[nb].known() == Some(dst) || net.up6[nb].known() == Some(dst),
                 Node::Isp(isp) => isp.public_pool.contains(dst) || isp.ipv6_prefix.is_some_and(|p| p.contains(dst)),
-                Node::Router(_) | Node::Internet(_) => false,
+                Node::Router(_) | Node::Internet(_) | Node::Switch(_) | Node::Power(_) => false,
             };
             owns.then_some(link)
         });
