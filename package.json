@@ -16,6 +16,7 @@
     "dev": "npm run wasm && npm run data && npm run dev -w app",
     "build": "npm run wasm && npm run data && npm run build -w app",
     "check": "sh scripts/check.sh",
+    "guest": "bash tools/guest/build.sh",
     "e2e": "npm run build && npm run e2e -w app"
   }
 }

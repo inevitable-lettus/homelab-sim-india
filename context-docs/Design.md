@@ -148,3 +148,12 @@ The trace has a complete text form. Board actions work by keyboard and have scre
 ## Neutrality
 
 No ISP, seller or sponsor can influence a verdict. Any future affiliate link or sponsorship must be disclosed and kept apart from verdicts.
+
+
+## Missions that grade files (Phase 7)
+
+- The brief panel gets a "Your files" section: one editor per file, the core's verdict and line-numbered problems for each, a key tool, and the offer of the real terminal.
+- Nothing is judged while typing. "Check my files" hands the files to the core. Then Run shows what the network does with them. A changed file shows "Changed since the last check".
+- The key tool shows what `wg genkey` and `wg pubkey` would print. The public key is worked out by the core. At guided depth one button puts the pair into the files. Challenge starts with empty files and only offers Copy.
+- The terminal states its download size and memory need before anything is fetched. On wide screens it opens under the board, where it is wide enough for `nano`. Under 768px it stays in the brief panel, and the editor is the recommended path.
+- A card with a hand-made tunnel that is up shows "tunnel up". "on mesh" is for mesh VPN members only.

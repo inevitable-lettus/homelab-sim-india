@@ -2030,3 +2030,24 @@ a.track__item:hover {
   overflow-wrap: anywhere;
   user-select: all;
 }
+
+.terminal {
+  display: grid;
+  gap: var(--s2);
+  justify-items: start;
+  padding: var(--s3);
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  background: var(--surface);
+}
+.terminal h4 {
+  font-size: var(--text-sm);
+}
+.terminal__screen {
+  width: 100%;
+  height: 22rem;
+  padding: var(--s2);
+  border-radius: var(--r2);
+  background: #16181d;
+  overflow: hidden;
+}

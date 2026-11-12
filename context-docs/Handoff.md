@@ -2,7 +2,9 @@
 
 Living state and build order. **Read this first in every session, and update it at the end of every phase.** Any session can pick up at the first phase not done. Phases are dependency-ordered, and each ends with its tests green.
 
-## Current status (2026-11-11)
+## Current status (2026-11-12)
+
+**Phase 7 is done (2026-11-12): Mission 5, Write the tunnel, is playable from a file editor and from a real Linux terminal in the browser. Next action: the owner's review, then sandbox phase S1 ([Sandbox.md](Sandbox.md) §14), stopping for review after each of S1 to S5.** Phase 6's learner test has still not been run.
 
 **Phases 0, 1, 4 and 5 are done**, with the minimum Phase 2 and 3 material they needed. Repo: <https://github.com/inevitable-lettus/homelab-sim-india>. Preview: <https://inevitable-lettus.github.io/homelab-sim-india/>. The deployed site has a landing page, the track map and Missions 1 to 4, playable on desktop and at 360px, with trace playback, a step log, findings, debriefs, concept pages, settings and local progress. Phase 1 confirmed v86 as the terminal engine and React Flow for the board.
 
@@ -272,11 +274,53 @@ Ship Missions 1–3 without the terminal, and the sandbox if S1 to S5 are done. 
 
 **Done =** findings are written here and the owner decides whether to continue, change or stop before the terminal work. No beginner has tested this concept yet.
 
-### Phase 7: Terminal missions
+### Phase 7: Terminal missions (done 2026-11-12)
 
 Guest image, `TerminalHost`, file parsers, `grade` on artifacts, file-editor fallback, guest image source publication.
 
-**Done =** Mission 5 passes and fails correctly from both terminal and editor.
+**Done =** Mission 5 passes and fails correctly from both terminal and editor. **Met**, by the tests below.
+
+What exists:
+
+- **Core.** `x25519.rs` (Curve25519 and key base64, checked against RFC 7748 and a Node key pair), `wireguard.rs` (`wg-quick` parser with line-numbered problems; the private key is never stored or echoed), `artifacts.rs` (a config sets the tunnel on `spec.node`; a public key file sets the key the `register_on` host has on record, an empty string when missing, which never matches). Reasons added: `artifact-ok`, `artifact-key-unchecked`, `tunnel-wrong-peer-key`.
+- **Engine changes in `walk.rs`.** `Payload` carries the sender's peer index. A receiver drops a packet locked to a key that is not its own. A failed handshake on a hand-made tunnel is shown as a setup leg.
+- **Mission 5**, `missions/write-the-tunnel/mission.yaml`: a hub at a public address with forwarding on, a phone that is already set up, and a server whose tunnel comes only from `/root/wg0.conf` and `/root/publickey`. Two attempts, at `idle_s` 0 and 600.
+- **UI.** `mission/Files.tsx` (editors, verdicts, key tool), `lib/keys.ts`, `lib/terminal.ts` (v86 host), `mission/TerminalPanel.tsx` and `TerminalView.tsx` (xterm.js, lazy chunk). WASM export `wireguard_public_key`.
+- **Image.** `tools/guest/` (`versions.env`, `build-image.sh`, `build-state.mjs`, `build.sh`), run by `npm run guest`. CI and the deploy workflow build it with Docker and cache it on the hash of `tools/guest/`.
+
+Results (2026-11-12, on the M4 MacBook):
+
+| Check | Result |
+|---|---|
+| Rust tests | 39 in data-build (13 new for Mission 5), 21 in sim-core. Win, no keepalive, slow keepalive (60, 90, 300 s), wrong endpoint port and address, AllowedIPs too narrow, key from another pair, missing or broken key file, wrong hub key, wrong tunnel address, starter file |
+| Missions 1 to 4 fixtures | byte-identical. Four lines added for Mission 5 |
+| Browser tests (Chrome, 1280 and 360 wide) | 16 pass, 2 skipped. Mission 5 from the editor at both widths. Mission 5 from the real terminal on desktop: keys from `wg genkey`, config written with `printf`, fail without keepalive, win with it, deleted file fails |
+| Screenshots looked at | 360px brief with problems and key tool; 360px board; 1280px terminal running `nano` on the starter file |
+| Terminal, saved state to prompt | under 5 s in the test, including the download from localhost |
+| First download for the terminal | 13.8 MB uncompressed (state 11.3 MB, engine 2.4 MB, index 0.1 MB), under the 20 MB budget |
+| App size | 452 KB gzipped of 512 KB. xterm.js is 84 KB of that and loads only when the terminal opens |
+| Guest | Alpine 3.21.0, kernel 6.12.115-0-virt, 74 packages, 1,430 rootfs files, 58 MB on disk in total |
+
+**Decisions made here (the owner can overrule):**
+
+- **No keepalive.** A peer with an endpoint and no keepalive is modelled as having last dialled when the tunnel was last used, `idle_s` ago. So it works at `idle_s: 0` and fails with `nat-mapping-expired` at 600, as the curriculum says. Real WireGuard only speaks when it has something to send, so "works at first" assumes the learner tested from the server once.
+- **GPL.** The image ships with a **written offer** plus pointers to Alpine's `aports` recipes, in `guest/SOURCES.md`, linked from the credits page and described in `THIRD_PARTY.md`. This binds whoever publishes the site for three years. The alternative is to publish the source archives beside the image. Owner to confirm.
+- **Challenge depth starts with empty files.** `starter` is the guided text.
+- **Files are graded as last checked**, not as typed, so playback is not rebuilt on every keystroke.
+- **Lesson keys are saved in this browser's localStorage** with the rest of the draft. The UI says not to use them on a real server.
+
+Gotchas:
+
+- The state, the engine, the index and the rootfs are one set. `build-state.mjs` refuses to run if `node_modules/v86` is not the commit in `versions.env`. Bump both together.
+- Alpine packages are pinned to the 3.21.0 image but not to exact versions, so a rebuild can pick up newer package builds. `manifest.json` records what was installed.
+- Locally the image was assembled from the Phase 1 rootfs (`GUEST_IMAGES=spikes/terminal/images GUEST_BIOS=spikes/terminal/.v86/bios bash tools/guest/build.sh`), because Docker was not running. **The Docker path of `build-image.sh` has only run in CI**: check the first CI run after this push.
+- The built-in browser pane freezes animation frames while hidden, so xterm draws nothing there. Use Playwright for terminal checks.
+- A learner-registered key equal to another peer's key makes the hub match the wrong peer entry first. The tests use an unrelated key for the mismatch case.
+- ESLint must ignore `app/public/guest` (the engine is minified JS).
+
+Not verified: a real phone, a screen reader on the editor or the terminal, the terminal on a slow connection or a low-memory device, Firefox and Safari, `vi`. GitHub Pages limits (1 GB site, 100 GB a month soft bandwidth, 10 minute deploy) are quoted from memory of GitHub's documentation, not re-read; the site is about 60 MB.
+
+Mission 5's brief, hints and debrief were written by the coding session and are due a pass by the content author, like the other missions.
 
 ### Phase 8: Complete the track
 
@@ -319,21 +363,18 @@ Community ISP reports through GitHub Discussions with a structured form (ISP, ci
 - **PATH:** Rust came from Homebrew's `rustup`, which isn't on the shell PATH. The npm scripts handle it through `scripts/env.sh`. For direct `cargo` use: `export PATH="$HOME/.cargo/bin:/opt/homebrew/opt/rustup/bin:$PATH"`.
 - **Toolchain:** Rust 1.99.1 pinned in `rust-toolchain.toml`. `wasm-bindgen` CLI pinned to the crate version in `Cargo.toml`, used directly instead of wasm-pack. TypeScript is 6.x because `typescript-eslint` does not support 7 yet.
 - **Generated, gitignored:** `app/src/wasm-pkg/`, `app/public/data/`. Run `npm run wasm` and `npm run data` after pulling Rust changes.
-- **Terminal image:** `bash spikes/terminal/build-image.sh` needs Docker running. Built on 2026-11-10 into `spikes/terminal/images/` (gitignored): 1,430 files, 43 MB compressed on disk, of which a learner fetches about 12 MB. `MEM_MB=128 node spikes/terminal/build-state.mjs` builds the saved state next to it (needs `zstd`). Both are local only until Phase 7 publishes them through CI.
+- **Terminal image:** `npm run guest` builds it into `app/public/guest/` and needs Docker, `zstd` and Python 3 (see Phase 7). The Phase 1 copy: `bash spikes/terminal/build-image.sh` needs Docker running. Built on 2026-11-10 into `spikes/terminal/images/` (gitignored): 1,430 files, 43 MB compressed on disk, of which a learner fetches about 12 MB. `MEM_MB=128 node spikes/terminal/build-state.mjs` builds the saved state next to it (needs `zstd`). Both are local only until Phase 7 publishes them through CI.
 - **Spikes:** `spikes/` has its own `package.json` and is not an npm workspace, so `npm ci` at the root ignores it. Pages: `cd spikes && npm run dev`, then `/terminal/` and `/trace/`. Nothing in `app/src` imports from it. Keep it until Phase 7 has what it needs.
 - **Known:** `npm audit` reports 10 moderate findings, all one `minimatch` issue inside ESLint tooling. Dev-only, not shipped.
 - **Update rule:** at the end of each phase, update Current status, mark the phase done with the date, and record gotchas here. Change Architecture, Design or Animations only when the design itself changes.
 
-## Phase 7 in progress (stopped 2026-11-11 on a usage limit; checkpoint committed 2026-11-12)
 
-Committed as a checkpoint after `npm run check` passed on 2026-11-12, all Rust tests passing (27 core, 21 data-build, Missions 1 to 4 fixtures unchanged):
 
-- `crates/sim-core/src/x25519.rs`: Curve25519 and key base64, checked against RFC 7748 and a Node key pair.
-- `crates/sim-core/src/wireguard.rs`: `wg-quick` config parser with line-numbered problems, and `public_key()` (what `wg pubkey` prints). The private key is never stored or echoed.
-- `crates/sim-core/src/artifacts.rs`: a config file sets the tunnel on `spec.node` (disabled until the file parses). A public key file sets the key the `register_on` host has for that peer (an empty string when missing, which never matches). New reasons `artifact-ok`, `artifact-key-unchecked`, `tunnel-wrong-peer-key`, with text in `content/steps.yaml`.
-- `walk.rs`: `Payload` carries the sender's peer index; a receiver drops a packet locked to a key that is not its own; a failed handshake on a hand-made tunnel is shown as a setup leg.
-- **Decision:** a peer with an endpoint and no keepalive is modelled as having last dialled when the tunnel was last used, `idle_s` ago. So "no keepalive" works at `idle_s: 0` and fails with `nat-mapping-expired` at `idle_s: 600`, as the curriculum says.
+## Sandbox data drafts (2026-11-11, unreviewed)
 
-Still to do for Phase 7: `missions/write-the-tunnel/mission.yaml` (hub host at a static public address with `forwarding: true`, phone and hub with real public keys, server tunnel `wg0` disabled, attempts at idle 0 and 600) and its Rust tests for the win and the four intended failures; add it to `content/tracks.yaml`; WASM export of `wireguard::public_key`; Files panel with editor and key tool; opt-in v86 terminal; image build in CI with GPL sources; hosting limits; Playwright test; docs; commit and push.
+Four data agents drafted P0 packs into `data-drafts/` (gitignored), each with an `.evidence.md` file. Nothing is in `data/`. A reviewer must open every source before S1 uses them.
 
-Sandbox data drafts: OS and runtime packs and device packs are drafted in `data-drafts/` (gitignored, unreviewed). The service and tariff/UPS agents had not reported when this was written.
+- **Drafted:** 6 OS packs, 3 runtime packs, 5 device packs (MacBook Air M1, ThinkPad T480, ThinkCentre M720q, Raspberry Pi 4, TP-Link UE300), 5 service packs, `reference/media.yaml`, battery and UPS notes, 3 tariffs (BESCOM, MSEDCL, BSES Rajdhani), 1 UPS (APC BX600C-IN).
+- **Not drafted:** the DC mini UPS and the ISP router pack. The maker pages would not load.
+- **Weak spots the agents flagged:** the T480 is not pinned to one configuration; India availability is `unknown` for the Pi and the MacBook Air; the BSES tariff may be out of date; `battery_wh` for the APC unit is computed, not published; MSEDCL slabs include the wheeling charge.
+- **Schema gaps they hit**, for S1 to settle: no `armv6`, `ppc64el` or `s390x` arch; `host_network` cannot say "localhost only"; no per-kW fixed charge in a tariff; no optional or outbound-only ports; no minimum OS version on an install; `battery.wh` is a whole number.

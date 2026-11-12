@@ -363,7 +363,7 @@ function BoardInner({ world, facts, positions, mode, player, editable, selected,
           data: {
             node,
             line: addressLine(node, nodeFacts),
-            tag: mesh ? 'on mesh' : undefined,
+            tag: mesh ? (meshKind(node, mesh.id) === 'overlay' ? 'on mesh' : 'tunnel up') : undefined,
             editable: editable?.has(item.id) ?? false,
             onOpen: passive ? undefined : onOpen,
           },
@@ -494,6 +494,12 @@ function BoardInner({ world, facts, positions, mode, player, editable, selected,
 
 function pointOf(position: LayoutPosition | undefined): Point {
   return { x: position?.[0] ?? 0, y: position?.[1] ?? 0 };
+}
+
+/** A label only: which kind of tunnel a card's badge is about. */
+function meshKind(node: World['nodes'][number], tunnel: Id): string {
+  const tunnels = node.kind === 'host' ? node.tunnels : undefined;
+  return tunnels?.find((t) => t.id === tunnel)?.kind ?? 'wireguard';
 }
 
 export function Board(props: BoardProps) {

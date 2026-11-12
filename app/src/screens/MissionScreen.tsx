@@ -8,6 +8,7 @@ import { TimelinePlayer } from '../lib/player';
 import { progress, useProgress, useReducedMotion } from '../lib/progress';
 import { href } from '../lib/route';
 import { grade } from '../lib/sim';
+import type { TerminalHost } from '../lib/terminal';
 import { buildTimeline } from '../lib/timeline';
 import type { Artifacts, Bundle, Depth, Grade, Id, Mission, Trace, World } from '../lib/types';
 import { setupKey } from '../lib/world';
@@ -19,6 +20,7 @@ import { Result } from '../mission/Result';
 import { editableNodes } from '../mission/Setup';
 import { Brief, Debrief, Findings, goalRevealed } from '../mission/Side';
 import { StepLog } from '../mission/StepLog';
+import { TerminalPanel } from '../mission/TerminalPanel';
 
 type Tab = 'brief' | 'board' | 'findings';
 
@@ -83,6 +85,26 @@ function MissionPlay({ mission, bundle }: { mission: Mission; bundle: Bundle }) 
       }),
     [mission.id],
   );
+  // While the terminal is open, the files inside it are the ones that count.
+  const [host, setHost] = useState<TerminalHost | null>(null);
+  const [reading, setReading] = useState(false);
+  const checkFiles = async () => {
+    if (!host) {
+      setChecked({ files });
+      return;
+    }
+    setReading(true);
+    const decoder = new TextDecoder();
+    const found: FileTexts = {};
+    for (const spec of artifacts) {
+      const data = await host.readFile(spec.path);
+      if (data) found[spec.path] = decoder.decode(data);
+    }
+    setFiles(found);
+    progress.saveFiles(mission.id, found);
+    setChecked({ files: found });
+    setReading(false);
+  };
   const dirty = !!checked && artifacts.some((spec) => (checked.files[spec.path] ?? '') !== (files[spec.path] ?? ''));
 
   const result: Grade = useMemo(() => grade(mission.id, depth, world, checked ?? NO_FILES), [mission.id, depth, world, checked]);
@@ -136,6 +158,8 @@ function MissionPlay({ mission, bundle }: { mission: Mission; bundle: Bundle }) 
     setFiles(starterFiles(artifacts, depth));
     setChecked(null);
   };
+  useEffect(() => () => host?.dispose(), [host]);
+  const terminalPanel = artifacts.length > 0 && <TerminalPanel files={files} host={host} onHost={setHost} />;
   const filesPanel = artifacts.length > 0 && (
     <Files
       artifacts={artifacts}
@@ -143,12 +167,13 @@ function MissionPlay({ mission, bundle }: { mission: Mission; bundle: Bundle }) 
       files={files}
       results={checked ? result.artifacts : null}
       dirty={dirty}
-      locked={false}
-      busy={false}
+      locked={!!host}
+      busy={reading}
       bundle={bundle}
       onEdit={editFile}
-      onCheck={() => setChecked({ files })}
+      onCheck={() => void checkFiles()}
       onStartAgain={startFilesAgain}
+      terminal={narrow ? terminalPanel : null}
     />
   );
 
@@ -199,6 +224,7 @@ function MissionPlay({ mission, bundle }: { mission: Mission; bundle: Bundle }) 
         <div className="dock">
           {won && <Debrief mission={mission} grade={result} bundle={bundle} next={next} world={world} onReplay={() => player.reset()} />}
           {showResult && trace && <Result trace={trace} world={world} bundle={bundle} explain={explain} />}
+          {!narrow && terminalPanel}
           <StepLog player={player} world={world} bundle={bundle} />
         </div>
       </main>

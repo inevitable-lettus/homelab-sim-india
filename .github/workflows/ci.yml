@@ -31,6 +31,14 @@ jobs:
           key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
       - run: rustup toolchain install
       - run: npm run setup
+      # The terminal's Linux image. Rebuilt only when its recipe changes.
+      - uses: actions/cache@v6
+        id: guest
+        with:
+          path: app/public/guest
+          key: guest-${{ hashFiles('tools/guest/**') }}
+      - if: steps.guest.outputs.cache-hit != 'true'
+        run: npm run guest
       - run: npm run check
       # Browser tests use the Chrome that ships on the runner and the build `check` just made.
       - run: npm run e2e -w app

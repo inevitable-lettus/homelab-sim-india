@@ -184,6 +184,9 @@ const THIRD_PARTY: [string, string, string][] = [
   ['React Flow (@xyflow/react)', 'MIT', 'https://reactflow.dev'],
   ['wasm-bindgen', 'MIT or Apache-2.0', 'https://github.com/rustwasm/wasm-bindgen'],
   ['serde, serde_json', 'MIT or Apache-2.0', 'https://serde.rs'],
+  ['v86', 'BSD-2-Clause', 'https://github.com/copy/v86'],
+  ['xterm.js', 'MIT', 'https://xtermjs.org'],
+  ['Alpine Linux', 'various, see SOURCES.md', 'https://alpinelinux.org'],
 ];
 
 export function Credits() {
@@ -212,6 +215,11 @@ export function Credits() {
         <h2>About the networks you see</h2>
         <p>
           Every address, distance and speed in the missions is a teaching model. The addresses come from ranges reserved for documentation. The ISP in the missions is invented and says nothing about any real provider.
+        </p>
+        <h2>The Linux in the terminal</h2>
+        <p>
+          The optional terminal runs Alpine Linux inside this page, using the v86 emulator. Much of that system is under the GNU GPL. The list of every package in it, where its source code is, and a written offer to send you that source are in{' '}
+          <a href={`${import.meta.env.BASE_URL}guest/SOURCES.md`}>SOURCES.md</a>.
         </p>
         <h2>Built with</h2>
         <ul>

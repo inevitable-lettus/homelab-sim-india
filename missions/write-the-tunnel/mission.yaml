@@ -157,13 +157,13 @@ world:
     - { id: server-home, a: server, b: home-router, medium: ethernet, length_m: 5, rate_ab_bps: 1000000000, rate_ba_bps: 1000000000 }
   attempts:
     - id: reach-now
-      label: Open Jellyfin right after the tunnel comes up
+      label: Straight away
       from: phone
       to: { kind: address, ip: 10.8.0.2 }
       proto: tcp
       port: 8096
     - id: reach-later
-      label: Open Jellyfin ten quiet minutes later
+      label: Ten minutes later
       from: phone
       to: { kind: address, ip: 10.8.0.2 }
       proto: tcp

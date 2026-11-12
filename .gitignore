@@ -9,6 +9,10 @@ app/dist/
 app/src/wasm-pkg/
 app/public/data/
 
+# Built by tools/guest/build.sh
+app/public/guest/
+tools/guest/.work/
+
 # Throwaway Phase 1 output
 spikes/**/dist/
 spikes/**/images/

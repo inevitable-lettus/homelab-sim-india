@@ -4,7 +4,7 @@ Free, open-source, India-specific homelab learning simulator. Static site, Rust/
 
 **Start every session by reading [context-docs/Handoff.md](context-docs/Handoff.md).** For Phase 1, read only [context-docs/Phase1-Brief.md](context-docs/Phase1-Brief.md).
 
-Commands: `npm run dev`, `npm run check` (run before every commit).
+Commands: `npm run dev`, `npm run check` (run before every commit), `npm run e2e` (browser tests), `npm run guest` (terminal image, needs Docker).
 
 | File | Holds |
 |---|---|

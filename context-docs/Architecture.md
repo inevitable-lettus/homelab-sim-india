@@ -177,6 +177,10 @@ Because grading reads artifacts rather than the VM, a **plain text editor can st
 
 The guest image must be small, lazy-loaded, and started only on request, showing its download size first.
 
+**As built (Phase 7).** `tools/guest/build.sh` writes one versioned set to `app/public/guest/` (gitignored, built in CI and cached on the hash of `tools/guest/`): `libv86.mjs`, `v86.wasm`, `fs.json`, `rootfs/`, `state.bin.zst`, `manifest.json` (versions, sizes, package list) and `SOURCES.md` (GPL source pointers and written offer). `app/src/lib/terminal.ts` loads the engine from that folder at run time, so the engine and the state can never be from different builds. The interface as built: `readFile` returns `null` for a missing file, `onOutput` gets bytes, and `bootGuest(manifest, onProgress)` replaces `boot`. xterm.js draws the screen and is a lazy chunk. A site built without the image still works: the terminal panel says so and the editor is the only path.
+
+**Files and the terminal.** The page keeps one text per graded file. With the terminal closed, the editor edits it. When the terminal opens, the texts are written into the guest once, the editor becomes read-only, and "Check my files" reads the guest's files back. Files are graded as last checked, never as typed.
+
 ## Data packs and the modularity contract
 
 Adding hardware must be easy. **Adding a device means adding one YAML file and running the data build. It must never require a code change.** CI enforces this with a test that loads every pack.
@@ -286,7 +290,7 @@ Targets, revised after Phase 1. "Low-end phone" has so far only been approximate
 |---|---|
 | App + core, gzipped, before any mission | under 500 KB (351 KB after Phase 5) |
 | `evaluate` on a mission-sized world | under 16 ms on a low-end Android phone |
-| Guest image first download, engine included | under 20 MB, from a saved state, shown before starting (measured 12.9 MB) |
+| Guest image first download, engine included | under 20 MB, from a saved state, shown before starting (measured 13.8 MB uncompressed on 2026-11-12; not counted in the 512 KB budget, because it lives in `guest/` and loads only on request) |
 | Terminal time to prompt, after download | under 3 s on a low-end Android phone |
 | Packet playback | at least 30 fps on a low-end Android phone (60 fps at 6x CPU throttle, no phone tested) |
 

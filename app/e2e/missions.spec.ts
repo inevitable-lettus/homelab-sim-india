@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { saveForward, setAnswer } from '../src/lib/world';
 import { bundle, grade, missionWorld, stepsOf } from './core';
@@ -136,8 +138,8 @@ test('the board works from the keyboard', async ({ page, isMobile }) => {
 
 test('Write the tunnel: the files decide, from the editor', async ({ page }) => {
   const world = missionWorld('write-the-tunnel');
-  const now = 'Open Jellyfin right after the tunnel comes up';
-  const later = 'Open Jellyfin ten quiet minutes later';
+  const now = 'Straight away';
+  const later = 'Ten minutes later';
   const runAttempt = async (label: string) => {
     await show(page, 'board');
     await page.getByRole('radio', { name: label }).click();
@@ -208,4 +210,61 @@ test('Write the tunnel: the files decide, from the editor', async ({ page }) => 
   // The private key stays in this browser's storage and nowhere else.
   const saved = await page.evaluate(() => localStorage.getItem('homelab-sim:v1') ?? '');
   expect(saved).toContain(privateKey);
+});
+
+test('Write the tunnel: the same files, written in the real terminal', async ({ page, isMobile }, testInfo) => {
+  test.skip(isMobile, 'the terminal is an opt-in extra on phones, and is checked on desktop');
+  test.skip(!existsSync(resolve('public/guest/manifest.json')), 'this build has no guest image (tools/guest/build.sh)');
+  test.setTimeout(120_000);
+  const screen = page.getByTestId('terminal-screen').locator('.xterm-rows');
+  const type = async (command: string, expect_: string | RegExp) => {
+    await page.keyboard.type(`${command}\n`);
+    await expect(screen).toContainText(expect_, { timeout: 30_000 });
+  };
+  const runAttempt = async (label: string) => {
+    await page.getByRole('radio', { name: label }).click();
+    await runToEnd(page);
+  };
+
+  await page.goto('/#/mission/write-the-tunnel');
+  await expect(page.getByTestId('terminal-start')).toContainText('MB');
+  await page.getByTestId('terminal-start').click();
+  await expect(screen).toContainText('server:~#', { timeout: 60_000 });
+  await page.getByTestId('terminal-screen').click();
+
+  // The starter file from the editor is already there, and wg is installed.
+  await type('grep -c Interface /root/wg0.conf; echo starter-$?', 'starter-0');
+  await type('umask 077; wg genkey | tee privatekey | wg pubkey > publickey; echo keys-$?', 'keys-0');
+  const hubKey = 'W9J3Hqm8EgeN6UewWxIP6ccD2CQZ8cC6fWREezgTW1U=';
+  await type(
+    `printf '[Interface]\\nPrivateKey = %s\\nAddress = 10.8.0.2/24\\n\\n[Peer]\\nPublicKey = ${hubKey}\\nEndpoint = 192.0.2.50:51820\\nAllowedIPs = 10.8.0.0/24\\n' "$(cat privatekey)" > wg0.conf; echo conf-$?`,
+    'conf-0',
+  );
+
+  // Checking reads the guest's files into the page. No keepalive yet.
+  await page.getByTestId('check-files').click();
+  await expect(page.getByTestId('file-wg0-conf')).toHaveAttribute('data-status', 'pass');
+  await expect(page.getByTestId('file-server-public-key')).toHaveAttribute('data-status', 'pass');
+  await expect(page.getByTestId('editor-wg0-conf')).toHaveValue(/Endpoint = 192\.0\.2\.50:51820/);
+  await runAttempt('Straight away');
+  await expect(page.getByTestId('result')).toHaveAttribute('data-outcome', 'delivered');
+  await runAttempt('Ten minutes later');
+  await expect(page.getByTestId('result')).toHaveAttribute('data-outcome', 'dropped');
+  await expect(page.getByTestId('debrief')).toHaveCount(0);
+
+  // Fix it in the terminal, check again, and both attempts get through.
+  await page.getByTestId('terminal-screen').click();
+  await type('echo PersistentKeepalive = 25 >> wg0.conf; echo fixed-$?', 'fixed-0');
+  await page.getByTestId('check-files').click();
+  await expect(page.getByTestId('editor-wg0-conf')).toHaveValue(/PersistentKeepalive = 25/);
+  await runAttempt('Straight away');
+  await runAttempt('Ten minutes later');
+  await expect(page.getByTestId('debrief')).toContainText('Mission complete');
+
+  // A file deleted in the terminal is a missing file, not a pass.
+  await page.getByTestId('terminal-screen').click();
+  await type('rm publickey; echo gone-$?', 'gone-0');
+  await page.getByTestId('check-files').click();
+  await expect(page.getByTestId('file-server-public-key')).toHaveAttribute('data-status', 'fail');
+  await page.screenshot({ path: testInfo.outputPath('terminal.png'), fullPage: true });
 });
