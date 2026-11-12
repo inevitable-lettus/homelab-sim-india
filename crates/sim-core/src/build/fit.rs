@@ -15,7 +15,7 @@ pub(super) fn rules(cx: &mut Cx) -> Vec<MachineBudget> {
         let usb = usb(cx, host);
         let ports = ethernet(cx, host);
         os_storage(cx, host);
-        machines.push(MachineBudget { node: host.id.clone(), ram, bays, usb, ports, avg_w: None });
+        machines.push(MachineBudget { node: host.id.clone(), ram, bays, usb, ports, avg_w: None, battery_min: None });
     }
     switch_ports(cx);
     wifi(cx);

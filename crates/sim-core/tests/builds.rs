@@ -62,6 +62,7 @@ fn bundle() -> Bundle {
         computer("mystery", json!({})),
         json!({ "id": "good-router", "kind": "archetype", "category": "router", "label": "Router you control",
             "network": { "wifi": "wifi6" },
+            "power": { "idle_w": 8 },
             "router": { "lan": [{}, {}, {}, {}], "admin": "full", "port_forwarding": true, "lan_dns_setting": true,
                 "dhcp_can_disable": true, "dhcp_reservation": true } }),
         json!({ "id": "isp-router", "kind": "archetype", "category": "router", "label": "Locked ISP router",
@@ -93,6 +94,14 @@ fn bundle() -> Bundle {
         json!({ "id": "sd-32", "kind": "archetype", "category": "drive", "label": "Memory card",
             "drive": { "interface": "sd_card", "medium": "ssd", "capacity_gb": 32, "needs_12v": false } }),
         json!({ "id": "drive-blank", "kind": "archetype", "category": "drive", "label": "Unknown drive" }),
+        json!({ "id": "ups", "kind": "archetype", "category": "ups", "label": "Small UPS",
+            "ups": { "max_w": 360, "battery_wh": 84, "waveform": "stepped_sine" } }),
+        json!({ "id": "ups-chart", "kind": "archetype", "category": "ups", "label": "UPS with a chart",
+            "ups": { "max_w": 360, "waveform": "sine",
+                "runtime": [{ "load_w": 100, "minutes": 20 }, { "load_w": 20, "minutes": 140 }] } }),
+        json!({ "id": "ups-tiny", "kind": "archetype", "category": "inverter", "label": "Square-wave inverter",
+            "ups": { "max_w": 30, "battery_wh": 84, "waveform": "square" } }),
+        json!({ "id": "ups-blank", "kind": "archetype", "category": "ups", "label": "Unknown UPS" }),
         json!({ "id": "tv", "kind": "archetype", "category": "client", "label": "TV",
             "network": { "wifi": "wifi5" },
             "client": { "plays": { "h264": true, "hevc_10": false }, "apps": ["media"] } }),
@@ -178,6 +187,26 @@ fn bundle() -> Bundle {
         "os": by_id(systems),
         "runtimes": by_id(runtimes),
         "services": by_id(services),
+        "tariffs": {
+            "slabs": { "id": "slabs", "teaching": true, "state": "Teaching", "discom": "Teaching",
+                "category": "domestic", "effective_from": "2026-04-01",
+                "slabs": [{ "upto_kwh": 100, "paise_per_kwh": 300 }, { "upto_kwh": 300, "paise_per_kwh": 500 },
+                    { "paise_per_kwh": 800 }],
+                "duty_permille": 50 },
+            "free": { "id": "free", "teaching": true, "state": "Teaching", "discom": "Teaching",
+                "category": "domestic", "effective_from": "2026-04-01",
+                "slabs": [{ "upto_kwh": 200, "paise_per_kwh": 400 }, { "paise_per_kwh": 700 }],
+                "duty_permille": 0, "free_units": { "upto_kwh": 200, "condition": "A state scheme" } },
+            "no-duty": { "id": "no-duty", "teaching": true, "state": "Teaching", "discom": "Teaching",
+                "category": "domestic", "effective_from": "2026-04-01", "slabs": [{ "paise_per_kwh": 800 }] }
+        },
+        "outages": {
+            "evening": { "id": "evening", "label": "Evening cut, 2 hours", "kind": "teaching", "duration_min": 120 },
+            "isp-down": { "id": "isp-down", "label": "Cut that takes the ISP too", "kind": "teaching",
+                "duration_min": 30, "isp_side": "down" },
+            "isp-unknown": { "id": "isp-unknown", "label": "Cut, ISP unknown", "kind": "teaching",
+                "duration_min": 30, "isp_side": "unknown" }
+        },
         "media": {
             "h264_1080p": { "label": "H.264 1080p", "codec": "h264", "kbps": 6000, "teaching": true },
             "hevc_2160p_10bit": { "label": "HEVC 4K", "codec": "hevc_10", "kbps": 14000, "teaching": true },
@@ -924,4 +953,219 @@ fn a_broken_build_is_refused_with_a_reason() {
     ] {
         assert!(found.contains(&(want.0, want.1.to_owned())), "{want:?} not in {found:?}");
     }
+}
+
+fn power(world: &Value) -> sim_core::build::power::PowerSummary {
+    evaluate(world).build.unwrap().power
+}
+
+/// The laptop draws 12 W idle and 45 W busy. At the assumed 10% busy that is
+/// 12 + 33 x 100 / 1000 = 15 W, or 15 x 730 = 10,950 Wh a month.
+#[test]
+fn the_lab_is_billed_on_top_of_the_household() {
+    // 150 kWh a month already (the assumed figure): the lab's 10.95 kWh all
+    // falls in the 500 paise slab. 10,950 x 500 x 12 x 1.05 / 1000 = 68,985.
+    let mut world = base();
+    world["home"] = json!({ "tariff": "slabs" });
+    let summary = power(&world);
+    assert_eq!(summary.lab_avg_w, Some(15));
+    assert_eq!(summary.lab_kwh_year, Some(131));
+    assert_eq!(summary.yearly_paise, Some(68_985));
+    let rate = summary.rate_used.unwrap();
+    assert_eq!((rate.from_paise_per_kwh, rate.to_paise_per_kwh), (500, 500));
+    let assumed: Vec<&str> = summary.assumptions.iter().map(|a| a.reason.id()).collect();
+    assert!(assumed.contains(&"assumed-busy-share") && assumed.contains(&"assumed-base-use"), "{assumed:?}");
+
+    // 295 kWh already: 5,000 Wh at 500 and 5,950 Wh at 800.
+    // (2,500,000 + 4,760,000) x 12 x 1.05 / 1000 = 91,476.
+    world["home"] = json!({ "tariff": "slabs", "base_kwh_month": 295 });
+    let summary = power(&world);
+    assert_eq!(summary.yearly_paise, Some(91_476));
+    let rate = summary.rate_used.unwrap();
+    assert_eq!((rate.from_paise_per_kwh, rate.to_paise_per_kwh), (500, 800));
+    assert!(!summary.assumptions.iter().any(|a| a.reason == Reason::AssumedBaseUse));
+
+    // Free units up to 200, household at 190: the first 10,000 Wh are free,
+    // 950 Wh are billed at 700. 665,000 x 12 / 1000 = 7,980.
+    world["home"] = json!({ "tariff": "free", "base_kwh_month": 190, "free_units_apply": true });
+    assert_eq!(power(&world).yearly_paise, Some(7_980));
+    // The scheme does not apply: 10,000 Wh at 400 and 950 Wh at 700.
+    world["home"] = json!({ "tariff": "free", "base_kwh_month": 190 });
+    assert_eq!(power(&world).yearly_paise, Some(55_980));
+
+    // The learner's own rate replaces the slabs: 10,950 x 800 x 12 / 1000.
+    world["home"] = json!({ "tariff": "slabs", "rate_paise_per_kwh": 800 });
+    assert_eq!(power(&world).yearly_paise, Some(105_120));
+
+    // A busier machine: 12 + 33 x 500 / 1000 = 28 W.
+    server(&mut world)["busy_permille"] = json!(500);
+    assert_eq!(power(&world).lab_avg_w, Some(28));
+}
+
+#[test]
+fn will_it_last() {
+    use Reason::*;
+    fn cost(w: &mut Value, max: u64) {
+        push(w, "intents", json!({ "kind": "yearly_cost", "id": "cheap", "max_paise": max }));
+    }
+    fn ups(w: &mut Value, pack: &str, feeds: &[&str]) {
+        push(w, "nodes", json!({ "kind": "power", "id": "ups", "label": "UPS", "device": pack }));
+        for to in feeds {
+            push(w, "power_feeds", json!({ "from": "ups", "to": to }));
+        }
+    }
+    fn survive(w: &mut Value, outage: &str) {
+        forward(w);
+        reach(w);
+        push(w, "intents", json!({ "kind": "survive_outage", "id": "stay-up", "outage": outage, "keep": ["remote"] }));
+    }
+    check(&[
+        ("under the limit", YearlyCost, Said::Pass, |w| {
+            w["home"] = json!({ "tariff": "slabs" });
+            cost(w, 70_000);
+        }),
+        ("over the limit", YearlyCost, Said::Fail, |w| {
+            w["home"] = json!({ "tariff": "slabs" });
+            cost(w, 60_000);
+        }),
+        ("watts unknown", YearlyCost, Said::Unknown, |w| {
+            w["home"] = json!({ "tariff": "slabs" });
+            server(w)["device"] = json!("mystery");
+            cost(w, 70_000);
+        }),
+        ("no tariff chosen", YearlyCost, Said::Unknown, |w| cost(w, 70_000)),
+        ("duty not stated", YearlyCost, Said::Unknown, |w| {
+            w["home"] = json!({ "tariff": "no-duty" });
+            cost(w, 70_000);
+        }),
+        // 84 Wh x 0.6 x 60 / (15 + 8) W = 131 minutes.
+        ("server and router on the UPS", OutageCovered, Said::Pass, |w| {
+            ups(w, "ups", &["server", "router"]);
+            survive(w, "evening");
+        }),
+        ("nothing behind the router", OutageCovered, Said::Fail, |w| {
+            ups(w, "ups", &["server"]);
+            survive(w, "evening");
+        }),
+        ("a UPS we know nothing about", OutageCovered, Said::Unknown, |w| {
+            ups(w, "ups-blank", &["server", "router"]);
+            survive(w, "evening");
+        }),
+        ("the ISP goes down with the mains", OutageCovered, Said::Fail, |w| {
+            ups(w, "ups", &["server", "router"]);
+            survive(w, "isp-down");
+        }),
+        ("the ISP may or may not stay up", OutageCovered, Said::Unknown, |w| {
+            ups(w, "ups", &["server", "router"]);
+            survive(w, "isp-unknown");
+        }),
+        // The chart: 23 W sits between 20 W (140 min) and 100 W (20 min).
+        ("a maker's runtime chart", OutageCovered, Said::Pass, |w| {
+            ups(w, "ups-chart", &["server", "router"]);
+            survive(w, "evening");
+        }),
+        ("load within the UPS", UpsOverloaded, Said::Pass, |w| ups(w, "ups", &["server", "router"])),
+        ("load over the UPS", UpsOverloaded, Said::Fail, |w| ups(w, "ups-tiny", &["server", "router"])),
+        ("UPS limit unknown", UpsOverloaded, Said::Unknown, |w| ups(w, "ups-blank", &["server"])),
+        ("an overloaded UPS holds nothing", OutageCovered, Said::Fail, |w| {
+            ups(w, "ups-tiny", &["server", "router"]);
+            survive(w, "evening");
+        }),
+        ("a square wave into a computer", InverterWaveform, Said::Warn, |w| ups(w, "ups-tiny", &["server"])),
+        ("a stepped sine is fine", InverterWaveform, Said::Pass, |w| ups(w, "ups", &["server"])),
+        ("waveform unknown", InverterWaveform, Said::UnknownNote, |w| ups(w, "ups-blank", &["server"])),
+        ("only the router fed, nothing to warn", InverterWaveform, Said::Nothing, |w| ups(w, "ups", &["router"])),
+        // 45 Wh x 0.8 x 60 / 15 W = 144 minutes on its own battery.
+        ("a laptop rides the cut out", LaptopAsUps, Said::Pass, |w| {
+            ups(w, "ups", &["router"]);
+            survive(w, "evening");
+        }),
+        ("a board with no battery goes dark and stays dark", RecoversAfterOutage, Said::Unknown, |w| {
+            server(w)["device"] = json!("sbc");
+            ups(w, "ups", &["router"]);
+            survive(w, "evening");
+        }),
+        ("set to start again when power returns", RecoversAfterOutage, Said::Pass, |w| {
+            server(w)["busy_permille"] = json!(1000);
+            server(w)["settings"] = json!({ "ac_power_recovery": true });
+            ups(w, "ups", &["router"]);
+            survive(w, "evening");
+        }),
+        ("able to, and not set", RecoversAfterOutage, Said::Fail, |w| {
+            server(w)["busy_permille"] = json!(1000);
+            ups(w, "ups", &["router"]);
+            survive(w, "evening");
+        }),
+        ("a service that has to be started by hand", ServiceAutostart, Said::Fail, |w| {
+            server(w)["busy_permille"] = json!(1000);
+            server(w)["services"][0]["autostart"] = json!(false);
+            ups(w, "ups", &["router"]);
+            survive(w, "evening");
+        }),
+        ("always on and always charging", BatteryAlwaysCharging, Said::Warn, |_| {}),
+        ("a charge limit this system supports", BatteryAlwaysCharging, Said::Pass, |w| {
+            server(w)["device"] = json!("air");
+            server(w)["os"] = json!("macos");
+            server(w)["settings"] = json!({ "charge_limit": true });
+        }),
+        ("a charge limit nobody can vouch for", BatteryAlwaysCharging, Said::UnknownNote, |w| {
+            server(w)["settings"] = json!({ "charge_limit": true });
+        }),
+        ("no battery, nothing to say", BatteryAlwaysCharging, Said::Nothing, |w| server(w)["device"] = json!("sbc")),
+        ("lid closed, supported", LidClosedRunning, Said::Pass, |w| {
+            server(w)["device"] = json!("air");
+            server(w)["os"] = json!("macos");
+            server(w)["settings"] = json!({ "lid_closed": true });
+        }),
+        ("lid closed, unknown", LidClosedRunning, Said::Unknown, |w| {
+            server(w)["settings"] = json!({ "lid_closed": true });
+        }),
+        ("lid open, nothing to say", LidClosedRunning, Said::Nothing, |_| {}),
+        ("fanless and busy", FanlessSustainedLoad, Said::Pass, |w| {
+            server(w)["device"] = json!("air");
+            server(w)["os"] = json!("macos");
+            server(w)["busy_permille"] = json!(600);
+        }),
+        ("fanless and idle", FanlessSustainedLoad, Said::Nothing, |w| {
+            server(w)["device"] = json!("air");
+            server(w)["os"] = json!("macos");
+        }),
+    ]);
+}
+
+#[test]
+fn a_ups_that_misses_the_router_fails_at_the_router() {
+    let mut world = base();
+    push(&mut world, "nodes", json!({ "kind": "power", "id": "ups", "label": "UPS", "device": "ups" }));
+    push(&mut world, "power_feeds", json!({ "from": "ups", "to": "server" }));
+    forward(&mut world);
+    reach(&mut world);
+    push(
+        &mut world,
+        "intents",
+        json!({ "kind": "survive_outage", "id": "stay-up", "outage": "evening",
+        "keep": ["remote"] }),
+    );
+    let report = evaluate(&world);
+    let finding = report.findings.iter().find(|f| f.rule_id == Reason::OutageCovered).unwrap();
+    assert_eq!((finding.status, finding.involved.clone()), (Status::Fail, vec!["router".to_owned()]));
+    assert_eq!(intent(&report, "stay-up"), Status::Fail);
+    let build = report.build.unwrap();
+    // 84 Wh x 0.6 x 60 / 15 W = 201 minutes for the server alone.
+    assert_eq!(
+        (build.ups[0].fed_avg_w, build.ups[0].runtime_min, build.ups[0].overloaded),
+        (Some(15), Some(201), Some(false))
+    );
+    let machine = build.machines.iter().find(|m| m.node == "server").unwrap();
+    assert_eq!((machine.avg_w, machine.battery_min), (Some(15), Some(144)));
+    let assumed: Vec<&str> = build.power.assumptions.iter().map(|a| a.reason.id()).collect();
+    for want in ["assumed-busy-share", "assumed-ups-usable", "assumed-laptop-usable"] {
+        assert!(assumed.contains(&want), "{want} not in {assumed:?}");
+    }
+
+    // Feed the router too and the goal stands, on the stated assumption that the ISP stays up.
+    push(&mut world, "power_feeds", json!({ "from": "ups", "to": "router" }));
+    let report = evaluate(&world);
+    assert_eq!(intent(&report, "stay-up"), Status::Pass, "{:?}", against(&report, "stay-up"));
+    assert!(report.build.unwrap().power.assumptions.iter().any(|a| a.reason == Reason::AssumedIspStaysUp));
 }

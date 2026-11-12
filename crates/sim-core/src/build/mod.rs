@@ -79,6 +79,9 @@ pub struct MachineBudget {
     /// Wired Ethernet ports.
     pub ports: Budget,
     pub avg_w: Option<u32>,
+    /// Minutes the machine's own battery holds it up, for a laptop.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub battery_min: Option<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -152,6 +155,19 @@ impl Read {
 
     pub fn missing(&mut self, pack: &str, field: &str) {
         self.missing.push((pack.to_owned(), field.to_owned()));
+    }
+
+    /// A figure the learner typed in.
+    pub fn note_learner(&mut self) {
+        self.note(Provenance::Learner);
+    }
+
+    /// Take on what another reading used and missed.
+    pub fn merge(&mut self, other: &Read) {
+        if let Some(provenance) = other.provenance {
+            self.note(provenance);
+        }
+        self.missing.extend(other.missing.iter().cloned());
     }
 }
 
