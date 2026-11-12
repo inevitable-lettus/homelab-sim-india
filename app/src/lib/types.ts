@@ -21,6 +21,30 @@ export interface Service {
   proto: Proto;
   port: number;
   bind?: 'all' | 'loopback';
+  /** Sandbox: the service pack this is. */
+  app?: Id;
+  install?: 'native' | 'container' | 'lxc' | 'addon' | 'package';
+  autostart?: boolean;
+}
+
+export interface Price {
+  paise: number;
+  owned?: boolean;
+}
+
+/** A part fitted to a machine: a drive, an adapter, a hub. */
+export interface Mount {
+  id: Id;
+  pack: Id;
+  into?: Id;
+  price?: Price;
+}
+
+export interface MachineSettings {
+  lid_closed?: boolean;
+  charge_limit?: boolean;
+  ac_power_recovery?: boolean;
+  always_on?: boolean;
 }
 
 export interface Peer {
@@ -55,6 +79,15 @@ export interface HostNode {
   tunnels?: Tunnel[];
   runs_on?: Id;
   forwarding?: boolean;
+  os?: Id;
+  runtime?: Id;
+  guest?: 'vm' | 'lxc' | 'container';
+  alloc?: { ram_mb?: number; disk_gb?: number; threads?: number };
+  parts?: Mount[];
+  settings?: MachineSettings;
+  role?: 'server' | 'client';
+  busy_permille?: number;
+  price?: Price;
 }
 
 export interface PortForward {
@@ -74,7 +107,8 @@ export interface RouterNode {
   lan: string;
   port_forwards?: PortForward[];
   udp_timeout_s?: number;
-  ipv6_inbound: 'allow' | 'deny';
+  ipv6_inbound?: 'allow' | 'deny';
+  price?: Price;
 }
 
 export type LineMode = 'public' | 'cgnat' | 'unknown' | 'profile';
@@ -97,7 +131,42 @@ export interface InternetNode {
   label: string;
 }
 
-export type WorldNode = HostNode | RouterNode | IspNode | InternetNode;
+export interface SwitchNode {
+  kind: 'switch';
+  id: Id;
+  label: string;
+  device?: Id;
+  price?: Price;
+}
+
+/** A UPS, an inverter or a DC backup unit. */
+export interface PowerNode {
+  kind: 'power';
+  id: Id;
+  label: string;
+  device?: Id;
+  price?: Price;
+}
+
+export type WorldNode = HostNode | RouterNode | IspNode | InternetNode | SwitchNode | PowerNode;
+
+/** What the learner wants from a sandbox build. */
+export type Intent =
+  | { kind: 'run'; id: Id; host: Id; service: Id }
+  | { kind: 'reach'; id: Id; from: Id; host: Id; service: Id; via: Target }
+  | { kind: 'stream'; id: Id; client: Id; host: Id; service: Id; format: Id; streams?: number; via?: Target }
+  | { kind: 'home_dns'; id: Id; host: Id; service: Id; router: Id }
+  | { kind: 'store'; id: Id; host: Id; gb: number; copies?: number }
+  | { kind: 'survive_outage'; id: Id; outage: Id; keep: Id[] }
+  | { kind: 'yearly_cost'; id: Id; max_paise: number };
+
+export interface HomePlan {
+  tariff?: Id;
+  rate_paise_per_kwh?: number;
+  base_kwh_month?: number;
+  free_units_apply?: boolean;
+  outage?: Id;
+}
 
 export type Medium = 'ethernet' | 'fibre' | 'wifi' | 'cellular' | 'backbone';
 
@@ -143,6 +212,11 @@ export interface World {
   attempts: Attempt[];
   answers?: { question: Id; value: string }[];
   line_checks?: { isp: Id; result: 'public' | 'cgnat' | 'unknown' }[];
+  intents?: Intent[];
+  power_feeds?: { from: Id; to: Id }[];
+  home?: HomePlan;
+  /** Devices the learner described themselves. Typed in `packs.ts`. */
+  custom_devices?: unknown[];
 }
 
 // ----------------------------------------------------------------- bundle
@@ -365,6 +439,8 @@ export interface Finding {
   explanation_id: Id;
   provenance: Provenance;
   debrief_only: boolean;
+  /** Sandbox: the goals this finding counts towards. */
+  intents?: Id[];
 }
 
 export interface Report {
@@ -372,6 +448,31 @@ export interface Report {
   facts: { nodes: NodeFacts[] };
   findings: Finding[];
   attempts: Trace[];
+  /** Sandbox builds only. */
+  build?: BuildReport;
+}
+
+export interface Budget {
+  used: number | null;
+  recommended?: number;
+  total: number | null;
+  terms?: { label: string; value: number | null }[];
+}
+
+export interface BuildReport {
+  intents: { id: Id; status: Status; findings: number[]; attempt?: Id }[];
+  machines: { node: Id; ram: Budget; bays: Budget; usb: Budget; ports: Budget; avg_w: number | null; battery_min?: number }[];
+  power: {
+    lab_avg_w: number | null;
+    lab_kwh_year: number | null;
+    yearly_paise: number | null;
+    rate_used: { tariff: Id | null; from_paise_per_kwh: number; to_paise_per_kwh: number } | null;
+    assumptions: { reason: Id; value: number }[];
+  };
+  ups: { node: Id; fed: Id[]; fed_avg_w: number | null; runtime_min: number | null; overloaded: boolean | null }[];
+  parts: { node: Id; mount?: Id; pack: Id; label: string; price_paise: number | null; owned: boolean }[];
+  price_total_paise: number | null;
+  unknowns: { pack: Id; field: string; used_by: Id[] }[];
 }
 
 export interface GoalResult {

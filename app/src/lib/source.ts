@@ -9,3 +9,6 @@ export const sourceLink = url
       label: commit ? `Source (${commit.slice(0, 7)})` : 'Source',
     }
   : null;
+
+/** The repository, for links that open an issue form. Null when the deploy did not set it. */
+export const sourceUrl: string | null = url || null;

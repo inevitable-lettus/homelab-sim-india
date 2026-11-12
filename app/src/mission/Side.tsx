@@ -225,6 +225,9 @@ export function Debrief({ mission, grade, bundle, next, world, onReplay }: { mis
         <button type="button" className="btn" onClick={onReplay}>
           Play it again
         </button>
+        <a className="btn" href={href.builds} data-testid="try-your-own">
+          Try it with your own parts
+        </a>
       </div>
     </section>
   );

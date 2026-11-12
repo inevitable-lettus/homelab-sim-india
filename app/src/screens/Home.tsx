@@ -100,6 +100,9 @@ export function Home({ bundle }: { bundle: Bundle }) {
                 <ArrowRightIcon size={18} />
               </a>
             )}
+            <a className="btn btn--large" href={href.builds} data-testid="build-your-own">
+              Build your own setup
+            </a>
             <ul className="hero__facts">
               <li>Free and open source</li>
               <li>No signup</li>
@@ -169,7 +172,9 @@ export function Home({ bundle }: { bundle: Bundle }) {
               what you want it to do, and see what works, what won't, and what we can't tell yet, before you spend
               anything.
             </p>
-            <p className="track__soon">Coming soon. It is being built in the open, in the same repository.</p>
+            <p className="track__soon">
+              An early version, with teaching models rather than real devices. <a href={href.builds}>Open the sandbox</a>
+            </p>
           </div>
           <ul className="track__list">
             {SANDBOX_QUESTIONS.map(([title, detail]) => (

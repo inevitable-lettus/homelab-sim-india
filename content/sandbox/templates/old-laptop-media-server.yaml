@@ -26,13 +26,13 @@ world:
     - { kind: survive_outage, id: power-cut, outage: evening-2h, keep: [run-media] }
 layout:
   wide:
-    away-phone: [0, 140]
-    mobile-network: [190, 140]
-    internet: [380, 140]
-    home-isp: [570, 140]
-    router: [760, 140]
-    server: [950, 140]
-    tv: [760, 300]
+    away-phone: [0, 20]
+    mobile-network: [190, 20]
+    internet: [380, 20]
+    home-isp: [570, 20]
+    router: [570, 180]
+    server: [380, 180]
+    tv: [570, 340]
   narrow:
     away-phone: [0, 0]
     mobile-network: [0, 84]

@@ -5,11 +5,17 @@ export type Route =
   | { name: 'home' }
   | { name: 'mission'; id: string }
   | { name: 'concept'; id: string }
+  | { name: 'builds' }
+  | { name: 'build'; id: string }
+  | { name: 'buildImport'; payload: string }
   | { name: 'settings' }
   | { name: 'credits' };
 
 export function parseRoute(hash: string): Route {
-  const [, name, id] = hash.replace(/^#/, '').split('/');
+  const [, name, id, rest] = hash.replace(/^#/, '').split('/');
+  if (name === 'build' && id === 'import' && rest) return { name: 'buildImport', payload: rest };
+  if (name === 'build' && id) return { name: 'build', id: decodeURIComponent(id) };
+  if (name === 'build') return { name: 'builds' };
   if (name === 'mission' && id) return { name, id: decodeURIComponent(id) };
   if (name === 'concept' && id) return { name, id: decodeURIComponent(id) };
   if (name === 'settings' || name === 'credits') return { name };
@@ -20,6 +26,9 @@ export const href = {
   home: '#/',
   mission: (id: string) => `#/mission/${encodeURIComponent(id)}`,
   concept: (id: string) => `#/concept/${encodeURIComponent(id)}`,
+  builds: '#/build',
+  build: (id: string) => `#/build/${encodeURIComponent(id)}`,
+  buildImport: (payload: string) => `#/build/import/${payload}`,
   settings: '#/settings',
   credits: '#/credits',
 };

@@ -3,6 +3,7 @@ import { useProgress, useReducedMotion } from './lib/progress';
 import { useRoute } from './lib/route';
 import { loadSim } from './lib/sim';
 import type { Bundle } from './lib/types';
+import { BuildEditor, BuildImport, Builds } from './screens/Build';
 import { Home } from './screens/Home';
 import { MissionScreen } from './screens/MissionScreen';
 import { Concept, Credits, Settings } from './screens/Pages';
@@ -37,7 +38,7 @@ export function App() {
   useEffect(() => {
     const mission = route.name === 'mission' ? bundle?.missions[route.id] : undefined;
     const concept = route.name === 'concept' ? bundle?.explanations[route.id] : undefined;
-    const part = mission?.title ?? concept?.title ?? (route.name === 'settings' ? 'Settings' : route.name === 'credits' ? 'Source and credits' : '');
+    const part = mission?.title ?? concept?.title ?? (route.name === 'settings' ? 'Settings' : route.name === 'builds' || route.name === 'build' || route.name === 'buildImport' ? 'Build your own' : route.name === 'credits' ? 'Source and credits' : '');
     document.title = part ? `${part} · Homelab Sim` : 'Homelab Sim: remote access on Indian broadband';
     window.scrollTo(0, 0);
   }, [route, bundle]);
@@ -69,6 +70,12 @@ export function App() {
       return <MissionScreen bundle={engine.bundle} id={route.id} />;
     case 'concept':
       return <Concept bundle={engine.bundle} id={route.id} />;
+    case 'builds':
+      return <Builds />;
+    case 'build':
+      return <BuildEditor key={route.id} bundle={engine.bundle} id={route.id} />;
+    case 'buildImport':
+      return <BuildImport payload={route.payload} />;
     case 'settings':
       return <Settings />;
     case 'credits':
