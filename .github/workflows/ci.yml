@@ -42,3 +42,11 @@ jobs:
       - run: npm run check
       # Browser tests use the Chrome that ships on the runner and the build `check` just made.
       - run: npm run e2e -w app
+      # Traces of failed attempts, including ones that passed on retry.
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-traces
+          path: app/test-results
+          if-no-files-found: ignore
+          retention-days: 7

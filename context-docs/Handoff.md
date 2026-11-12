@@ -318,6 +318,10 @@ Gotchas:
 - A learner-registered key equal to another peer's key makes the hub match the wrong peer entry first. The tests use an unrelated key for the mismatch case.
 - ESLint must ignore `app/public/guest` (the engine is minified JS).
 
+After the push (commit `ab43c60`): CI and the deploy both passed, with the image built by Docker on the runner (kernel 6.12.117-0-virt there, 6.12.115 locally: the package drift noted above). The live site serves `guest/manifest.json`, the state (11.3 MB), the engine and `SOURCES.md`, and the bundle has Mission 5.
+
+**Known flaky test:** the phone run of "The wall" timed out once in CI and passed on retry. The same test is what made the CI run for the Phase 6 commit (`cd23474`) fail, which was not noticed at the time. It has never failed locally. CI now uploads Playwright traces (`playwright-traces` artifact) so the next failure can be read. Not yet diagnosed.
+
 Not verified: a real phone, a screen reader on the editor or the terminal, the terminal on a slow connection or a low-memory device, Firefox and Safari, `vi`. GitHub Pages limits (1 GB site, 100 GB a month soft bandwidth, 10 minute deploy) are quoted from memory of GitHub's documentation, not re-read; the site is about 60 MB.
 
 Mission 5's brief, hints and debrief were written by the coding session and are due a pass by the content author, like the other missions.
